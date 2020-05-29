@@ -262,6 +262,10 @@ instance : inner_product_space (euclidean_space n) :=
 
 instance : finite_dimensional ℝ (euclidean_space n) := by apply_instance
 instance : inhabited (euclidean_space n) := ⟨0⟩
+
+@[simp] lemma findim_euclidean_space : finite_dimensional.findim ℝ (euclidean_space n) = n :=
+by simp
+
 end instances
 
 section orthogonal
