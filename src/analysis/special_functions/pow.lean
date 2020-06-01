@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Chris Hughes, Abhimanyu Pallavi Sudhir, Jean Lo, Calle Sönne, Sébastien Gouëzel
 -/
 import analysis.special_functions.trigonometric
+import analysis.calculus.extend_deriv
 
 /-!
 # Power function on `ℂ`, `ℝ` and `ℝ⁺`
@@ -437,6 +438,64 @@ lemma continuous_rpow_of_pos (h : ∀a, 0 < g a) (hf : continuous f) (hg : conti
 
 end prove_rpow_is_continuous
 
+section prove_rpow_is_differentiable
+
+lemma has_deriv_at_rpow_of_pos {x : ℝ} (h : 0 < x) (p : ℝ) :
+  has_deriv_at (λ x, x^p) (p * x^(p-1)) x :=
+begin
+  have : has_deriv_at (λ x, exp (log x * p)) (p * x^(p-1)) x,
+  { convert (has_deriv_at_exp _).comp x ((has_deriv_at_log (ne_of_gt h)).mul_const p) using 1,
+    field_simp [rpow_def_of_pos h, mul_sub, exp_sub, exp_log h, ne_of_gt h],
+    ring },
+  apply this.congr_of_mem_nhds,
+  have : set.Ioi (0 : ℝ) ∈ 𝓝 x := mem_nhds_sets is_open_Ioi h,
+  exact filter.eventually_of_mem this (λ y hy, rpow_def_of_pos hy _)
+end
+
+lemma has_deriv_at_rpow_of_neg {x : ℝ} (h : x < 0) (p : ℝ) :
+  has_deriv_at (λ x, x^p) (p * x^(p-1)) x :=
+begin
+  have : has_deriv_at (λ x, exp (log x * p) * cos (p * π)) (p * x^(p-1)) x,
+  { convert ((has_deriv_at_exp _).comp x ((has_deriv_at_log (ne_of_lt h)).mul_const p)).mul_const _
+      using 1,
+    field_simp [rpow_def_of_neg h, mul_sub, exp_sub, sub_mul, cos_sub, exp_log_of_neg h, ne_of_lt h],
+    ring },
+  apply this.congr_of_mem_nhds,
+  have : set.Iio (0 : ℝ) ∈ 𝓝 x := mem_nhds_sets is_open_Iio h,
+  exact filter.eventually_of_mem this (λ y hy, rpow_def_of_neg hy _)
+end
+
+lemma has_deriv_at_rpow {x : ℝ} (h : x ≠ 0) (p : ℝ) :
+  has_deriv_at (λ x, x^p) (p * x^(p-1)) x :=
+begin
+  rcases lt_trichotomy x 0 with H|H|H,
+  { exact has_deriv_at_rpow_of_neg H p },
+  { exact (h H).elim },
+  { exact has_deriv_at_rpow_of_pos H p },
+end
+
+lemma has_deriv_at_rpow_zero_of_one_le {p : ℝ} (h : 1 ≤ p) :
+  has_deriv_at (λ x, x^p) (p * (0 : ℝ)^(p-1)) 0 :=
+begin
+  apply has_deriv_at_of_has_deriv_at_of_ne (λ x hx, has_deriv_at_rpow hx p),
+  { exact (continuous_rpow_of_pos (λ _, (lt_of_lt_of_le zero_lt_one h))
+      continuous_id continuous_const).continuous_at },
+  { rcases le_iff_eq_or_lt.1 h with rfl|h,
+    { simp [continuous_const.continuous_at] },
+    { exact (continuous_const.mul (continuous_rpow_of_pos (λ _, sub_pos_of_lt h)
+        continuous_id continuous_const)).continuous_at } }
+end
+
+lemma has_deriv_at_rpow_of_one_le (x : ℝ) {p : ℝ} (h : 1 ≤ p) :
+  has_deriv_at (λ x, x^p) (p * x^(p-1)) x :=
+begin
+  by_cases hx : x = 0,
+  { rw hx, exact has_deriv_at_rpow_zero_of_one_le h },
+  { exact has_deriv_at_rpow hx p }
+end
+
+end prove_rpow_is_differentiable
+
 section sqrt
 
 lemma sqrt_eq_rpow : sqrt = λx:ℝ, x ^ (1/(2:ℝ)) :=
@@ -455,6 +514,163 @@ by rw sqrt_eq_rpow; exact continuous_rpow_of_pos (λa, by norm_num) continuous_i
 end sqrt
 
 end real
+
+section differentiability
+open real
+
+variables {f : ℝ → ℝ} {x f' : ℝ} {s : set ℝ} (p : ℝ)
+/- Differentiability statements for the power of a function, when the function does not vanish
+and the exponent is arbitrary-/
+
+lemma has_deriv_within_at.rpow (hf : has_deriv_within_at f f' s x) (hx : f x ≠ 0) :
+  has_deriv_within_at (λ y, (f y)^p) (f' * p * (f x)^(p-1)) s x :=
+begin
+  convert (has_deriv_at_rpow hx p).comp_has_deriv_within_at x hf using 1,
+  ring
+end
+
+lemma has_deriv_at.rpow (hf : has_deriv_at f f' x) (hx : f x ≠ 0) :
+  has_deriv_at (λ y, (f y)^p) (f' * p * (f x)^(p-1)) x :=
+begin
+  rw ← has_deriv_within_at_univ at *,
+  exact hf.rpow p hx
+end
+
+lemma differentiable_within_at.rpow (hf : differentiable_within_at ℝ f s x) (hx : f x ≠ 0) :
+  differentiable_within_at ℝ (λx, (f x)^p) s x :=
+(hf.has_deriv_within_at.rpow p hx).differentiable_within_at
+
+@[simp] lemma differentiable_at.rpow (hf : differentiable_at ℝ f x) (hx : f x ≠ 0) :
+  differentiable_at ℝ (λx, (f x)^p) x :=
+(hf.has_deriv_at.rpow p hx).differentiable_at
+
+lemma differentiable_on.rpow (hf : differentiable_on ℝ f s) (hx : ∀ x ∈ s, f x ≠ 0) :
+  differentiable_on ℝ (λx, (f x)^p) s :=
+λx h, (hf x h).rpow p (hx x h)
+
+@[simp] lemma differentiable.rpow (hf : differentiable ℝ f) (hx : ∀ x, f x ≠ 0) :
+  differentiable ℝ (λx, (f x)^p) :=
+λx, (hf x).rpow p (hx x)
+
+lemma deriv_within_rpow (hf : differentiable_within_at ℝ f s x) (hx : f x ≠ 0)
+  (hxs : unique_diff_within_at ℝ s x) :
+  deriv_within (λx, (f x)^p) s x = (deriv_within f s x) * p * (f x)^(p-1) :=
+(hf.has_deriv_within_at.rpow p hx).deriv_within hxs
+
+@[simp] lemma deriv_rpow (hf : differentiable_at ℝ f x) (hx : f x ≠ 0) :
+  deriv (λx, (f x)^p) x = (deriv f x) * p * (f x)^(p-1) :=
+(hf.has_deriv_at.rpow p hx).deriv
+
+/- Differentiability statements for the power of a function, when the function may vanish
+but the exponent is at least one. -/
+
+variable {p}
+
+lemma has_deriv_within_at.rpow_of_one_le (hf : has_deriv_within_at f f' s x) (hp : 1 ≤ p) :
+  has_deriv_within_at (λ y, (f y)^p) (f' * p * (f x)^(p-1)) s x :=
+begin
+  convert (has_deriv_at_rpow_of_one_le (f x) hp).comp_has_deriv_within_at x hf using 1,
+  ring
+end
+
+lemma has_deriv_at.rpow_of_one_le (hf : has_deriv_at f f' x) (hp : 1 ≤ p) :
+  has_deriv_at (λ y, (f y)^p) (f' * p * (f x)^(p-1)) x :=
+begin
+  rw ← has_deriv_within_at_univ at *,
+  exact hf.rpow_of_one_le hp
+end
+
+lemma differentiable_within_at.rpow_of_one_le (hf : differentiable_within_at ℝ f s x) (hp : 1 ≤ p) :
+  differentiable_within_at ℝ (λx, (f x)^p) s x :=
+(hf.has_deriv_within_at.rpow_of_one_le hp).differentiable_within_at
+
+@[simp] lemma differentiable_at.rpow_of_one_le (hf : differentiable_at ℝ f x) (hp : 1 ≤ p) :
+  differentiable_at ℝ (λx, (f x)^p) x :=
+(hf.has_deriv_at.rpow_of_one_le hp).differentiable_at
+
+lemma differentiable_on.rpow_of_one_le (hf : differentiable_on ℝ f s) (hp : 1 ≤ p) :
+  differentiable_on ℝ (λx, (f x)^p) s :=
+λx h, (hf x h).rpow_of_one_le hp
+
+@[simp] lemma differentiable.rpow_of_one_le (hf : differentiable ℝ f) (hp : 1 ≤ p) :
+  differentiable ℝ (λx, (f x)^p) :=
+λx, (hf x).rpow_of_one_le hp
+
+lemma deriv_within_rpow_of_one_le (hf : differentiable_within_at ℝ f s x) (hp : 1 ≤ p)
+  (hxs : unique_diff_within_at ℝ s x) :
+  deriv_within (λx, (f x)^p) s x = (deriv_within f s x) * p * (f x)^(p-1) :=
+(hf.has_deriv_within_at.rpow_of_one_le hp).deriv_within hxs
+
+@[simp] lemma deriv_rpow_of_one_le (hf : differentiable_at ℝ f x) (hp : 1 ≤ p) :
+  deriv (λx, (f x)^p) x = (deriv f x) * p * (f x)^(p-1) :=
+(hf.has_deriv_at.rpow_of_one_le hp).deriv
+
+/- Differentiability statements for the square root of a function, when the function does not
+vanish -/
+
+lemma has_deriv_within_at.sqrt (hf : has_deriv_within_at f f' s x) (hx : f x ≠ 0) :
+  has_deriv_within_at (λ y, sqrt (f y)) (f' / (2 * sqrt (f x))) s x :=
+begin
+  simp only [sqrt_eq_rpow],
+  convert hf.rpow (1/2) hx,
+  rcases lt_trichotomy (f x) 0 with H|H|H,
+  { have A : (f x)^((1:ℝ)/2) = 0,
+    { rw rpow_def_of_neg H,
+      have : cos (1/2 * π) = 0, by { convert cos_pi_div_two using 2, ring },
+      rw [this],
+      simp },
+    have B : f x ^ ((1:ℝ) / 2 - 1) = 0,
+    { rw rpow_def_of_neg H,
+      have : cos (π/2 - π) = 0, by simp [cos_sub],
+      have : cos (((1:ℝ)/2 - 1) * π) = 0, by { convert this using 2, ring },
+      rw this,
+      simp },
+    rw [A, B],
+    simp },
+  { exact (hx H).elim },
+  { have A : 0 < (f x)^((1:ℝ)/2) := rpow_pos_of_pos H _,
+    have B : (f x) ^ (-(1:ℝ)) = (f x)^(-((1:ℝ)/2)) * (f x)^(-((1:ℝ)/2)),
+    { rw [← rpow_add _ _ H],
+      congr,
+      norm_num },
+    rw [sub_eq_add_neg, rpow_add _ _ H, B, rpow_neg (le_of_lt H)],
+    field_simp [hx, ne_of_gt A],
+    ring }
+end
+
+lemma has_deriv_at.sqrt (hf : has_deriv_at f f' x) (hx : f x ≠ 0) :
+  has_deriv_at (λ y, sqrt (f y)) (f' / (2 * sqrt(f x))) x :=
+begin
+  rw ← has_deriv_within_at_univ at *,
+  exact hf.sqrt hx
+end
+
+lemma differentiable_within_at.sqrt (hf : differentiable_within_at ℝ f s x) (hx : f x ≠ 0) :
+  differentiable_within_at ℝ (λx, sqrt (f x)) s x :=
+(hf.has_deriv_within_at.sqrt hx).differentiable_within_at
+
+@[simp] lemma differentiable_at.sqrt (hf : differentiable_at ℝ f x) (hx : f x ≠ 0) :
+  differentiable_at ℝ (λx, sqrt (f x)) x :=
+(hf.has_deriv_at.sqrt hx).differentiable_at
+
+lemma differentiable_on.sqrt (hf : differentiable_on ℝ f s) (hx : ∀ x ∈ s, f x ≠ 0) :
+  differentiable_on ℝ (λx, sqrt (f x)) s :=
+λx h, (hf x h).sqrt (hx x h)
+
+@[simp] lemma differentiable.sqrt (hf : differentiable ℝ f) (hx : ∀ x, f x ≠ 0) :
+  differentiable ℝ (λx, sqrt (f x)) :=
+λx, (hf x).sqrt (hx x)
+
+lemma deriv_within_sqrt (hf : differentiable_within_at ℝ f s x) (hx : f x ≠ 0)
+  (hxs : unique_diff_within_at ℝ s x) :
+  deriv_within (λx, sqrt (f x)) s x = (deriv_within f s x) / (2 * sqrt (f x)) :=
+(hf.has_deriv_within_at.sqrt hx).deriv_within hxs
+
+@[simp] lemma deriv_sqrt (hf : differentiable_at ℝ f x) (hx : f x ≠ 0) :
+  deriv (λx, sqrt (f x)) x = (deriv f x) / (2 * sqrt (f x)) :=
+(hf.has_deriv_at.sqrt hx).deriv
+
+end differentiability
 
 namespace nnreal
 
