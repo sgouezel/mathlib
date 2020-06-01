@@ -122,48 +122,58 @@ structure is_conjugate_exponent (p q : ℝ) : Prop :=
 (one_lt : 1 < p)
 (inv_add_inv_conj : 1/p + 1/q = 1)
 
-lemma is_conjugate_exponent_iff {p q : ℝ} :
-  p.is_conjugate_exponent q ↔ q = 1/(1-1/p) :=
-calc
-1/p + 1/q = 1 ↔ 1/q = 1-1/p : eq_sub_iff_add_eq'.symm
-... ↔ q = 1/(1-1/p) : by { simp only [one_div_eq_inv], rw inv_eq_iff, exact eq_comm }
+lemma is_conjugate_exponent.ne_zero {p q : ℝ} (h : p.is_conjugate_exponent q) :
+  p ≠ 0 :=
+ne_of_gt (lt_trans zero_lt_one h.one_lt)
+
+lemma is_conjugate_exponent.sub_one_ne_zero {p q : ℝ}
+  (h : p.is_conjugate_exponent q) : p - 1 ≠ 0 :=
+sub_ne_zero_of_ne (ne_of_gt h.one_lt)
+
+lemma is_conjugate_exponent_iff {p q : ℝ} (h : 1 < p) :
+  p.is_conjugate_exponent q ↔ q = p/(p-1) :=
+begin
+  have A : 1/p + 1/q = 1 ↔ q = 1/(1-1/p) := calc
+    1/p + 1/q = 1 ↔ 1/q = 1-1/p : eq_sub_iff_add_eq'.symm
+    ... ↔ q = 1/(1-1/p) : by { simp only [one_div_eq_inv], rw inv_eq_iff, exact eq_comm },
+  split,
+  { assume H,
+    rw A.1 H.inv_add_inv_conj,
+    field_simp [H.ne_zero] },
+  { assume H,
+    refine ⟨h, _⟩,
+    rw H,
+    field_simp [ne_of_gt (lt_trans zero_lt_one h)] }
+end
 
 namespace is_conjugate_exponent
 
 variables {p q : ℝ} (h : p.is_conjugate_exponent q)
 include h
 
-protected lemma eq : q = 1/(1-1/p) :=
-is_conjugate_exponent_iff.1 h
+lemma conj_eq : q = p/(p-1) :=
+(is_conjugate_exponent_iff h.one_lt).1 h
 
 protected lemma symm : q.is_conjugate_exponent p :=
-by rwa [is_conjugate_exponent, add_comm]
-
-lemma one_lt (hp : 1 < p) : 1 < q :=
-begin
-  rw [h.eq, ← inv_eq_one_div],
-  refine one_lt_inv (by simp [inv_lt_one hp]) _,
-  have : 0 < p⁻¹, { apply inv_pos.2, linarith },
-  rw [← inv_eq_one_div],
-  linarith
-end
-
-lemma conj_add_one_sub_conj_mul_of_one_lt (hp : 1 < p) : q + (1 - q) * p = 0 :=
-begin
-  rw h.eq,
-  field_simp [ne_of_gt (lt_trans zero_lt_one hp), sub_ne_zero_of_ne (ne_of_gt hp)],
-  ring
-end
+{ one_lt :=
+    by { rw [h.conj_eq], exact one_lt_div_of_lt _ (sub_pos_of_lt h.one_lt) (sub_one_lt p) },
+  inv_add_inv_conj := by simpa [add_comm] using h.inv_add_inv_conj }
 
 end is_conjugate_exponent
 
+lemma inv_rpow (x p : ℝ) : (x⁻¹) ^ p = x^(-p) :=
+begin
+  have Z : x ≠ 0 := sorry,
+  have T : 0 < x := sorry,
+  have Z := div_rpow,
+end
 
 theorem finset.sum_le_sum_rpow_inv_rpow_mul_sum_rpow_inv_rpow
   {α : Type*} (s : finset α) (f g : α → ℝ) (hf : ∀ x ∈ s, 0 ≤ f x) (hg : ∀ x ∈ s, 0 ≤ g x)
-  (p q : ℝ) (hp : 1 < p) (hpq : p.is_conjugate_exponent q) :
+  (p q : ℝ) (hpq : p.is_conjugate_exponent q) :
   (∑ i in s, f i * g i) ≤ (∑ i in s, (f i)^p) ^ (1/p) * (∑ i in s, (g i)^q) ^ (1/q) :=
 begin
-  have hq : 1 < q := hpq.one_lt hp,
+  have hq : 1 < q := hpq.symm.one_lt,
   have Q : q ≠ 0 := ne_of_gt (lt_trans zero_lt_one hq),
   by_cases H : ∀ (i : α), i ∈ s → g i = 0,
   { -- assume first that all `g i` vanish. Then the result is trivial.
@@ -187,24 +197,62 @@ begin
     { have : 0 ≤ S := finset.sum_nonneg (λ i hi, rpow_nonneg_of_nonneg (hg i hi) _),
       exact lt_of_le_of_ne this (ne.symm S_ne) },
     set a := λ i, (g i)^q / S with ha,
-    have : (∑ i in s, a i * (f i * (g i)^(1-q))) ^ p ≤ (∑ i in s, a i * (f i * (g i)^(1-q))^p),
-    { apply (convex_on_rpow (le_of_lt hp)).map_sum_le,
-      { assume i hi, exact div_nonneg (rpow_nonneg_of_nonneg (hg i hi) _) S_pos },
-      { rw [ha, ← finset.sum_div, hS, div_self S_ne] },
-      { assume i hi, exact mul_nonneg (hf i hi) (rpow_nonneg_of_nonneg (hg i hi) _) } },
-    have : (∑ i in s, a i * (f i * (g i)^(1-q))^p) ≤ (∑ i in s, (f i)^p / S),
-    { apply finset.sum_le_sum (λ i hi, _),
-      calc a i * (f i * g i ^ (1 - q)) ^ p
-          = a i * ((f i) ^ p * (g i)^ ((1-q) * p)) :
-        by rw [mul_rpow (hf i hi) (rpow_nonneg_of_nonneg (hg i hi) _), ← rpow_mul (hg i hi)]
-      ... = ((f i)^p / S) * ((g i)^q * (g i)^((1-q)*p)) : by { simp [ha], ring }
-      ... ≤ (f i ^ p / S) * 1 : begin
-        apply mul_le_mul_of_nonneg_left _ (div_nonneg (rpow_nonneg_of_nonneg (hf i hi) _) S_pos),
+    have fgS_nonneg : 0 ≤ ∑ (x : α) in s, f x * g x / S :=
+      finset.sum_nonneg (λ i hi, div_nonneg (mul_nonneg (hf i hi) (hg i hi)) S_pos),
+    have main : (∑ i in s, f i * g i/S) ^ p ≤ (∑ i in s, (f i)^p) / S := sorry,/-calc
+      (∑ i in s, f i * g i/S) ^ p
+          ≤ (∑ i in s, a i * (f i * (g i)^(1-q))) ^ p : begin
+        apply rpow_le_rpow fgS_nonneg _ (le_of_lt (lt_trans zero_lt_one hpq.one_lt)),
+        apply finset.sum_le_sum (λ i hi, _),
         rcases le_iff_eq_or_lt.1 (hg i hi) with H|pos,
-        { simp [zero_rpow Q, ← H, zero_le_one] },
-        { rw [← rpow_add _ _ pos, hpq.conj_add_one_sub_conj_mul_of_one_lt hp, rpow_zero] }
+        { simp [ha, ← H], simp [← H, zero_rpow Q] },
+        { have : g i = (g i)^q * (g i)^(1-q), by simp [← rpow_add _ _ pos],
+          conv_lhs { rw this },
+          apply le_of_eq,
+          simp [ha],
+          ring }
       end
-      ... = f i ^p / S : by simp },
+      ... ≤ (∑ i in s, a i * (f i * (g i)^(1-q))^p) : begin
+        apply (convex_on_rpow (le_of_lt hpq.one_lt)).map_sum_le,
+        { assume i hi, exact div_nonneg (rpow_nonneg_of_nonneg (hg i hi) _) S_pos },
+        { rw [ha, ← finset.sum_div, hS, div_self S_ne] },
+        { assume i hi, exact mul_nonneg (hf i hi) (rpow_nonneg_of_nonneg (hg i hi) _) }
+      end
+      ... ≤ (∑ i in s, (f i)^p / S) : begin
+        apply finset.sum_le_sum (λ i hi, _),
+        calc a i * (f i * g i ^ (1 - q)) ^ p
+            = a i * ((f i) ^ p * (g i)^ ((1-q) * p)) :
+          by rw [mul_rpow (hf i hi) (rpow_nonneg_of_nonneg (hg i hi) _), ← rpow_mul (hg i hi)]
+        ... = ((f i)^p / S) * ((g i)^q * (g i)^((1-q)*p)) : by { simp [ha], ring }
+        ... ≤ (f i ^ p / S) * 1 : begin
+          apply mul_le_mul_of_nonneg_left _ (div_nonneg (rpow_nonneg_of_nonneg (hf i hi) _) S_pos),
+          rcases le_iff_eq_or_lt.1 (hg i hi) with H|pos,
+          { simp [zero_rpow Q, ← H, zero_le_one] },
+          { have : q + (1 - q) * p = 0, by { field_simp [hpq.conj_eq, hpq.sub_one_ne_zero], ring },
+            rw [← rpow_add _ _ pos, this, rpow_zero] }
+        end
+        ... = f i ^p / S : by simp
+      end
+      ... = (∑ i in s, (f i)^p) / S : by rw finset.sum_div,-/
+      calc
+      (∑ i in s, f i * g i)
+      = S * ((∑ i in s, f i * g i/S)^ p)^(1/p) : begin
+        have : p * p⁻¹ = 1 := div_self hpq.ne_zero,
+        simp only [← rpow_mul fgS_nonneg, this, one_div_eq_inv, rpow_one],
+        rw [← finset.sum_div, mul_div_cancel' _ S_ne]
+      end
+      ... ≤ S * ((∑ i in s, (f i)^p) / S)^(1/p) : begin
+        apply mul_le_mul_of_nonneg_left _ (le_of_lt S_pos),
+        exact rpow_le_rpow (rpow_nonneg_of_nonneg fgS_nonneg _) main
+          (div_nonneg zero_le_one (lt_trans zero_lt_one hpq.one_lt)),
+      end
+      ... = (∑ i in s, (f i)^p)^(1/p) * S^(1-1/p) : begin
+        simp [sub_eq_add_neg, rpow_add _ _ S_pos, div_eq_inv_mul],
+        rw mul_rpow,
+        rw inv_rpow,
+
+      end
+      ... = (∑ i in s, (f i)^p)^(1/p) * (∑ i in s, (g i)^q)^(1/q) : sorry
 
 
   }
