@@ -783,3 +783,45 @@ lemma filter.tendsto.nnrpow {α : Type*} {f : filter α} {u : α → nnreal} {v 
   (hx : tendsto u f (𝓝 x)) (hy : tendsto v f (𝓝 y)) (h : x ≠ 0 ∨ 0 < y) :
   tendsto (λ a, (u a) ^ (v a)) f (𝓝 (x ^ y)) :=
 tendsto.comp (nnreal.continuous_at_rpow h) (tendsto.prod_mk_nhds hx hy)
+
+
+namespace ennreal
+
+/-- The nonnegative real power function `x^y`, defined for `x : nnreal` and `y : ℝ ` as the
+restriction of the real power function. For `x > 0`, it is equal to `exp (y log x)`. For `x = 0`,
+one sets `0 ^ 0 = 1` and `0 ^ y = 0` for `y ≠ 0`. -/
+noncomputable def rpow : ennreal → ℝ → ennreal
+| (some x) y := if x = 0 ∧ y < 0 then ⊤ else (x ^ y : nnreal)
+| none     y := if 0 < y then ⊤ else if y = 0 then 1 else 0
+
+noncomputable instance : has_pow ennreal ℝ := ⟨rpow⟩
+
+@[simp] lemma rpow_eq_pow (x : ennreal) (y : ℝ) : rpow x y = x ^ y := rfl
+
+lemma rpow_top_def (y : ℝ) : rpow (⊤ : ennreal) y = if 0 < y then ⊤ else if y = 0 then 1 else 0 :=
+rfl
+
+lemma rpow_zero_def (y : ℝ) : rpow (0 : ennreal) y = if 0 < y then 0 else if y = 0 then 1 else ⊤ :=
+begin
+  have : (0 : ennreal) = some 0 := rfl,
+  rw [this, rpow],
+  simp only [true_and, coe_zero, eq_self_iff_true, some_eq_coe],
+  split_ifs,
+  { linarith },
+  { linarith },
+  { refl },
+  { simp only [true_and, nnreal.rpow_eq_zero_iff, eq_self_iff_true, ne.def, coe_eq_zero],
+    linarith },
+  { simp [h_2] },
+  { apply (h_2 _).elim,
+    linarith }
+end
+
+lemma rpow_coe_of_ne_zero {x : nnreal} (h : x ≠ 0) (y : ℝ) : (x : ennreal) ^ y = (x ^ y : nnreal) :=
+begin
+  rw [← ennreal.some_eq_coe],
+  change (if x = 0 ∧ y < 0 then (⊤ : ennreal) else (x ^ y : nnreal)) = (x ^ y : nnreal),
+  simp [h]
+end
+
+end ennreal
