@@ -221,12 +221,45 @@ by simp [rpow_def, *]
 
 @[simp] lemma one_rpow (x : ℝ) : (1 : ℝ) ^ x = 1 := by simp [rpow_def]
 
+lemma zero_rpow_le_one (x : ℝ) : (0 : ℝ) ^ x ≤ 1 :=
+by { by_cases h : x = 0; simp [h, zero_le_one] }
+
+lemma zero_rpow_nonneg (x : ℝ) : 0 ≤ (0 : ℝ) ^ x :=
+by { by_cases h : x = 0; simp [h, le_refl, zero_le_one] }
+
 lemma rpow_nonneg_of_nonneg {x : ℝ} (hx : 0 ≤ x) (y : ℝ) : 0 ≤ x ^ y :=
 by rw [rpow_def_of_nonneg hx];
   split_ifs; simp only [zero_le_one, le_refl, le_of_lt (exp_pos _)]
 
-lemma rpow_add {x : ℝ} (y z : ℝ) (hx : 0 < x) : x ^ (y + z) = x ^ y * x ^ z :=
+lemma rpow_add {x : ℝ} (hx : 0 < x) (y z : ℝ) : x ^ (y + z) = x ^ y * x ^ z :=
 by simp only [rpow_def_of_pos hx, mul_add, exp_add]
+
+lemma rpow_add' {x : ℝ} (hx : 0 ≤ x) {y z : ℝ} (h : y + z ≠ 0) : x ^ (y + z) = x ^ y * x ^ z :=
+begin
+  rcases le_iff_eq_or_lt.1 hx with H|pos,
+  { simp only [← H, h, rpow_eq_zero_iff_of_nonneg, true_and, zero_rpow, eq_self_iff_true, ne.def,
+               not_false_iff, zero_eq_mul],
+    by_contradiction F,
+    push_neg at F,
+    apply h,
+    simp [F] },
+  { exact rpow_add pos _ _ }
+end
+
+/-- For `0 ≤ x`, the only problematic case in the equality `x ^ y * x ^ z = x ^ (y + z)` is for
+`x = 0` and `y + z = 0`, where the right hand side is `1` while the left hand side can vanish.
+The inequality is always true, though, and given in this lemma. -/
+lemma le_rpow_add {x : ℝ} (hx : 0 ≤ x) (y z : ℝ) : x ^ y * x ^ z ≤ x ^ (y + z) :=
+begin
+  rcases le_iff_eq_or_lt.1 hx with H|pos,
+  { by_cases h : y + z = 0,
+    { simp only [H.symm, h, rpow_zero],
+      calc (0 : ℝ) ^ y * 0 ^ z ≤ 1 * 1 :
+        mul_le_mul (zero_rpow_le_one y) (zero_rpow_le_one z) (zero_rpow_nonneg z) zero_le_one
+      ... = 1 : by simp },
+    { simp [rpow_add', ← H, h] } },
+  { simp [rpow_add pos] }
+end
 
 lemma rpow_mul {x : ℝ} (hx : 0 ≤ x) (y z : ℝ) : x ^ (y * z) = (x ^ y) ^ z :=
 by rw [← complex.of_real_inj, complex.of_real_cpow (rpow_nonneg_of_nonneg hx _),
@@ -639,10 +672,10 @@ begin
   { exact (hx H).elim },
   { have A : 0 < (f x)^((1:ℝ)/2) := rpow_pos_of_pos H _,
     have B : (f x) ^ (-(1:ℝ)) = (f x)^(-((1:ℝ)/2)) * (f x)^(-((1:ℝ)/2)),
-    { rw [← rpow_add _ _ H],
+    { rw [← rpow_add H],
       congr,
       norm_num },
-    rw [sub_eq_add_neg, rpow_add _ _ H, B, rpow_neg (le_of_lt H)],
+    rw [sub_eq_add_neg, rpow_add H, B, rpow_neg (le_of_lt H)],
     field_simp [hx, ne_of_gt A],
     ring }
 end
@@ -714,7 +747,7 @@ by { rw ← nnreal.coe_eq, exact real.rpow_one _ }
 by { rw ← nnreal.coe_eq, exact real.one_rpow _ }
 
 lemma rpow_add {x : nnreal} (y z : ℝ) (hx : 0 < x) : x ^ (y + z) = x ^ y * x ^ z :=
-by { rw ← nnreal.coe_eq, exact real.rpow_add _ _ hx }
+by { rw ← nnreal.coe_eq, exact real.rpow_add hx _ _ }
 
 lemma rpow_mul (x : nnreal) (y z : ℝ) : x ^ (y * z) = (x ^ y) ^ z :=
 by { rw ← nnreal.coe_eq, exact real.rpow_mul x.2 y z }

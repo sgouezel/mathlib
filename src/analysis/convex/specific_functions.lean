@@ -209,17 +209,15 @@ begin
     -- formulate the main convexity inequality, in a suitable form
     have main : (∑ i in s, f i * g i/S) ^ p ≤ (∑ i in s, (f i)^p) / S := calc
       (∑ i in s, f i * g i/S) ^ p
-          ≤ (∑ i in s, a i * (f i * (g i)^(1-q))) ^ p :
+          = (∑ i in s, a i * (f i * (g i)^(1-q))) ^ p :
       begin
-        apply rpow_le_rpow fgS_nonneg _ (le_of_lt (lt_trans zero_lt_one hpq.one_lt)),
-        apply finset.sum_le_sum (λ i hi, _),
-        rcases le_iff_eq_or_lt.1 (hg i hi) with H|pos,
-        { simp [ha, ← H], simp [← H, zero_rpow hpq.symm.ne_zero] },
-        { have : g i = (g i)^q * (g i)^(1-q), by simp [← rpow_add _ _ pos],
-          conv_lhs { rw this },
-          apply le_of_eq,
-          simp [ha],
-          ring }
+        congr' 1,
+        apply finset.sum_congr rfl (λ i hi, _),
+        have : q + (1-q) ≠ 0, by simp,
+        have : g i = (g i)^q * (g i)^(1-q), by simp [← rpow_add' (hg i hi) this],
+        conv_lhs { rw this },
+        simp [ha],
+        ring
       end
       ... ≤ (∑ i in s, a i * (f i * (g i)^(1-q))^p) :
       begin
@@ -239,18 +237,17 @@ begin
         ... ≤ (f i ^ p / S) * 1 :
         begin
           apply mul_le_mul_of_nonneg_left _ (div_nonneg (rpow_nonneg_of_nonneg (hf i hi) _) S_pos),
-          rcases le_iff_eq_or_lt.1 (hg i hi) with H|pos,
-          { simp [zero_rpow hpq.symm.ne_zero, ← H, zero_le_one] },
-          { have : q + (1 - q) * p = 0, by { field_simp [hpq.conj_eq, hpq.sub_one_ne_zero], ring },
-            rw [← rpow_add _ _ pos, this, rpow_zero] }
+          have : q + (1 - q) * p = 0, by { field_simp [hpq.conj_eq, hpq.sub_one_ne_zero], ring },
+          have : 1 = (g i) ^ (q + (1 - q) * p), by simp [this],
+          conv_rhs { rw this },
+          exact le_rpow_add (hg i hi) _ _,
         end
-        ... = f i ^p / S : by simp
+        ... = f i ^p / S : by rw [mul_one]
       end
       ... = (∑ i in s, (f i)^p) / S : by rw finset.sum_div,
-      -- Now that we have proved the main inequality, deduce the result by putting the `S` factors
-      -- in the right place.
-      calc
-      (∑ i in s, f i * g i)
+    -- Now that we have proved the main inequality, deduce the result by putting the `S` factors
+    -- in the right place.
+    calc (∑ i in s, f i * g i)
       = S * ((∑ i in s, f i * g i/S) ^ p) ^ (1/p) :
       begin
         have : p * p⁻¹ = 1 := div_self hpq.ne_zero,
@@ -267,13 +264,12 @@ begin
       begin
         have : 0 ≤ ∑ (i : α) in s, f i ^ p :=
           finset.sum_nonneg (λ i hi, rpow_nonneg_of_nonneg (hf i hi) _),
-        simp only [sub_eq_add_neg, rpow_add _ _ S_pos, div_eq_inv_mul, mul_one, rpow_one],
-        rw [mul_rpow (inv_nonneg.2 (le_of_lt S_pos)) this, ← rpow_neg_one, ← rpow_mul (le_of_lt S_pos)],
+        simp only [sub_eq_add_neg, rpow_add S_pos, div_eq_inv_mul, mul_one, rpow_one],
+        rw [mul_rpow (inv_nonneg.2 (le_of_lt S_pos)) this, ← rpow_neg_one,
+            ← rpow_mul (le_of_lt S_pos)],
         simp only [neg_mul_eq_neg_mul_symm, one_mul],
         ring
       end
-      ... = (∑ i in s, (f i)^p) ^ (1/p) * (∑ i in s, (g i)^q) ^ (1/q) : begin
-        have : 1 - 1/p = 1/q := sub_eq_of_eq_add' (eq.symm hpq.inv_add_inv_conj),
-        rw this,
-      end },
+      ... = (∑ i in s, (f i)^p) ^ (1/p) * (∑ i in s, (g i)^q) ^ (1/q) :
+        by rw sub_eq_of_eq_add' (eq.symm hpq.inv_add_inv_conj) }
 end
