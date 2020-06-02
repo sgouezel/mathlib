@@ -69,6 +69,9 @@ end
 lemma cpow_neg (x y : ℂ) : x ^ -y = (x ^ y)⁻¹ :=
 by simp [cpow_def]; split_ifs; simp [exp_neg]
 
+lemma cpow_neg_one (x : ℂ) : x ^ (-1 : ℂ) = x⁻¹ :=
+by simpa using cpow_neg x 1
+
 @[simp] lemma cpow_nat_cast (x : ℂ) : ∀ (n : ℕ), x ^ (n : ℂ) = x ^ n
 | 0       := by simp
 | (n + 1) := if hx : x = 0 then by simp only [hx, pow_succ,
@@ -241,6 +244,12 @@ by simp only [rpow_def, (complex.of_real_pow _ _).symm, complex.cpow_nat_cast,
 @[simp] lemma rpow_int_cast (x : ℝ) (n : ℤ) : x ^ (n : ℝ) = x ^ n :=
 by simp only [rpow_def, (complex.of_real_fpow _ _).symm, complex.cpow_int_cast,
   complex.of_real_int_cast, complex.of_real_re]
+
+lemma rpow_neg_one (x : ℝ) : x ^ (-1 : ℝ) = x⁻¹ :=
+begin
+  suffices H : x ^ ((-1 : ℤ) : ℝ) = x⁻¹, by exact_mod_cast H,
+  simp only [rpow_int_cast, fpow_one, fpow_neg],
+end
 
 lemma mul_rpow {x y z : ℝ} (h : 0 ≤ x) (h₁ : 0 ≤ y) : (x*y)^z = x^z * y^z :=
 begin

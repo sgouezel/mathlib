@@ -122,6 +122,8 @@ structure is_conjugate_exponent (p q : ℝ) : Prop :=
 (one_lt : 1 < p)
 (inv_add_inv_conj : 1/p + 1/q = 1)
 
+noncomputable def conjugate_exponent (p : ℝ) : ℝ := p/(p-1)
+
 lemma is_conjugate_exponent.ne_zero {p q : ℝ} (h : p.is_conjugate_exponent q) :
   p ≠ 0 :=
 ne_of_gt (lt_trans zero_lt_one h.one_lt)
@@ -146,6 +148,10 @@ begin
     field_simp [ne_of_gt (lt_trans zero_lt_one h)] }
 end
 
+lemma is_conjugate_exponent_conjugate_exponent {p : ℝ} (h : 1 < p) :
+  p.is_conjugate_exponent (conjugate_exponent p) :=
+(is_conjugate_exponent_iff h).2 rfl
+
 namespace is_conjugate_exponent
 
 variables {p q : ℝ} (h : p.is_conjugate_exponent q)
@@ -161,29 +167,30 @@ protected lemma symm : q.is_conjugate_exponent p :=
 
 end is_conjugate_exponent
 
-lemma inv_rpow (x p : ℝ) : (x⁻¹) ^ p = x^(-p) :=
-begin
-  have Z : x ≠ 0 := sorry,
-  have T : 0 < x := sorry,
-  have Z := div_rpow,
-end
+end real
 
-theorem finset.sum_le_sum_rpow_inv_rpow_mul_sum_rpow_inv_rpow
+/-- Hölder inequality: the scalar product of two functions is bounded by the product of their
+`L^p` and `L^q` norms when `p` and `q` are conjugate exponents. Version for sums over finite sets,
+with nonnegative functions. -/
+theorem finset.sum_le_sum_rpow_rpow_inv_mul_sum_rpow_rpow_inv
   {α : Type*} (s : finset α) (f g : α → ℝ) (hf : ∀ x ∈ s, 0 ≤ f x) (hg : ∀ x ∈ s, 0 ≤ g x)
   (p q : ℝ) (hpq : p.is_conjugate_exponent q) :
   (∑ i in s, f i * g i) ≤ (∑ i in s, (f i)^p) ^ (1/p) * (∑ i in s, (g i)^q) ^ (1/q) :=
 begin
-  have hq : 1 < q := hpq.symm.one_lt,
-  have Q : q ≠ 0 := ne_of_gt (lt_trans zero_lt_one hq),
   by_cases H : ∀ (i : α), i ∈ s → g i = 0,
   { -- assume first that all `g i` vanish. Then the result is trivial.
     have A : (∑ i in s, f i * g i) = (∑ i in s, f i * 0),
     { apply finset.sum_congr rfl (λ x hx, _), simp [H x hx] },
     have B : (∑ i in s, (g i)^q) = (∑ i in s, 0),
     { apply finset.sum_congr rfl (λ x hx, _),
-      simp [H x hx, zero_rpow Q] },
-    simp [A, B, zero_rpow (inv_ne_zero Q)] },
-  { -- assume now that some `g i` is nonzero.
+      simp [H x hx, zero_rpow hpq.symm.ne_zero] },
+    simp [A, B, zero_rpow (inv_ne_zero hpq.symm.ne_zero)] },
+  { /- Assume now that some `g i` is nonzero, so that the sum `S = ∑ i in s, (g i)^q` is nonzero.
+    We will apply the convexity of the function `x ↦ x^p` to a suitable sum to get the result:
+    write `a i = (g i)^q / S` (these coefficients add up to `1`). Then, by convexity,
+    `(∑ a i * (f i * (g i)^(1-q))) ^ p ≤ (∑ a i * (f i * (g i)^(1-q)) ^ p)`. This is the desired
+    inequality, up to trivial massaging, as the sum on the left is `(∑ f i * g i / S) ^ p` and the
+    sum on the right is `(∑ (f i) ^ p) / S`. -/
     set S := (∑ i in s, (g i)^q) with hS,
     have S_ne : S ≠ 0,
     { assume Z,
@@ -192,68 +199,81 @@ begin
       rw finset.sum_eq_zero_iff_of_nonneg this at Z,
       apply H,
       assume i hi,
-      simpa [rpow_eq_zero_iff_of_nonneg (hg i hi), Q] using Z i hi },
+      simpa [rpow_eq_zero_iff_of_nonneg (hg i hi), hpq.symm.ne_zero] using Z i hi },
     have S_pos : 0 < S,
     { have : 0 ≤ S := finset.sum_nonneg (λ i hi, rpow_nonneg_of_nonneg (hg i hi) _),
       exact lt_of_le_of_ne this (ne.symm S_ne) },
     set a := λ i, (g i)^q / S with ha,
     have fgS_nonneg : 0 ≤ ∑ (x : α) in s, f x * g x / S :=
       finset.sum_nonneg (λ i hi, div_nonneg (mul_nonneg (hf i hi) (hg i hi)) S_pos),
-    have main : (∑ i in s, f i * g i/S) ^ p ≤ (∑ i in s, (f i)^p) / S := sorry,/-calc
+    -- formulate the main convexity inequality, in a suitable form
+    have main : (∑ i in s, f i * g i/S) ^ p ≤ (∑ i in s, (f i)^p) / S := calc
       (∑ i in s, f i * g i/S) ^ p
-          ≤ (∑ i in s, a i * (f i * (g i)^(1-q))) ^ p : begin
+          ≤ (∑ i in s, a i * (f i * (g i)^(1-q))) ^ p :
+      begin
         apply rpow_le_rpow fgS_nonneg _ (le_of_lt (lt_trans zero_lt_one hpq.one_lt)),
         apply finset.sum_le_sum (λ i hi, _),
         rcases le_iff_eq_or_lt.1 (hg i hi) with H|pos,
-        { simp [ha, ← H], simp [← H, zero_rpow Q] },
+        { simp [ha, ← H], simp [← H, zero_rpow hpq.symm.ne_zero] },
         { have : g i = (g i)^q * (g i)^(1-q), by simp [← rpow_add _ _ pos],
           conv_lhs { rw this },
           apply le_of_eq,
           simp [ha],
           ring }
       end
-      ... ≤ (∑ i in s, a i * (f i * (g i)^(1-q))^p) : begin
+      ... ≤ (∑ i in s, a i * (f i * (g i)^(1-q))^p) :
+      begin
+        -- this is where something happens, i.e., we use convexity.
         apply (convex_on_rpow (le_of_lt hpq.one_lt)).map_sum_le,
         { assume i hi, exact div_nonneg (rpow_nonneg_of_nonneg (hg i hi) _) S_pos },
         { rw [ha, ← finset.sum_div, hS, div_self S_ne] },
         { assume i hi, exact mul_nonneg (hf i hi) (rpow_nonneg_of_nonneg (hg i hi) _) }
       end
-      ... ≤ (∑ i in s, (f i)^p / S) : begin
+      ... ≤ (∑ i in s, (f i)^p / S) :
+      begin
         apply finset.sum_le_sum (λ i hi, _),
         calc a i * (f i * g i ^ (1 - q)) ^ p
             = a i * ((f i) ^ p * (g i)^ ((1-q) * p)) :
           by rw [mul_rpow (hf i hi) (rpow_nonneg_of_nonneg (hg i hi) _), ← rpow_mul (hg i hi)]
         ... = ((f i)^p / S) * ((g i)^q * (g i)^((1-q)*p)) : by { simp [ha], ring }
-        ... ≤ (f i ^ p / S) * 1 : begin
+        ... ≤ (f i ^ p / S) * 1 :
+        begin
           apply mul_le_mul_of_nonneg_left _ (div_nonneg (rpow_nonneg_of_nonneg (hf i hi) _) S_pos),
           rcases le_iff_eq_or_lt.1 (hg i hi) with H|pos,
-          { simp [zero_rpow Q, ← H, zero_le_one] },
+          { simp [zero_rpow hpq.symm.ne_zero, ← H, zero_le_one] },
           { have : q + (1 - q) * p = 0, by { field_simp [hpq.conj_eq, hpq.sub_one_ne_zero], ring },
             rw [← rpow_add _ _ pos, this, rpow_zero] }
         end
         ... = f i ^p / S : by simp
       end
-      ... = (∑ i in s, (f i)^p) / S : by rw finset.sum_div,-/
+      ... = (∑ i in s, (f i)^p) / S : by rw finset.sum_div,
+      -- Now that we have proved the main inequality, deduce the result by putting the `S` factors
+      -- in the right place.
       calc
       (∑ i in s, f i * g i)
-      = S * ((∑ i in s, f i * g i/S)^ p)^(1/p) : begin
+      = S * ((∑ i in s, f i * g i/S) ^ p) ^ (1/p) :
+      begin
         have : p * p⁻¹ = 1 := div_self hpq.ne_zero,
         simp only [← rpow_mul fgS_nonneg, this, one_div_eq_inv, rpow_one],
         rw [← finset.sum_div, mul_div_cancel' _ S_ne]
       end
-      ... ≤ S * ((∑ i in s, (f i)^p) / S)^(1/p) : begin
+      ... ≤ S * ((∑ i in s, (f i)^p) / S) ^ (1/p) :
+      begin
         apply mul_le_mul_of_nonneg_left _ (le_of_lt S_pos),
         exact rpow_le_rpow (rpow_nonneg_of_nonneg fgS_nonneg _) main
           (div_nonneg zero_le_one (lt_trans zero_lt_one hpq.one_lt)),
       end
-      ... = (∑ i in s, (f i)^p)^(1/p) * S^(1-1/p) : begin
-        simp [sub_eq_add_neg, rpow_add _ _ S_pos, div_eq_inv_mul],
-        rw mul_rpow,
-        rw inv_rpow,
-
+      ... = (∑ i in s, (f i)^p) ^ (1/p) * S ^ (1-1/p) :
+      begin
+        have : 0 ≤ ∑ (i : α) in s, f i ^ p :=
+          finset.sum_nonneg (λ i hi, rpow_nonneg_of_nonneg (hf i hi) _),
+        simp only [sub_eq_add_neg, rpow_add _ _ S_pos, div_eq_inv_mul, mul_one, rpow_one],
+        rw [mul_rpow (inv_nonneg.2 (le_of_lt S_pos)) this, ← rpow_neg_one, ← rpow_mul (le_of_lt S_pos)],
+        simp only [neg_mul_eq_neg_mul_symm, one_mul],
+        ring
       end
-      ... = (∑ i in s, (f i)^p)^(1/p) * (∑ i in s, (g i)^q)^(1/q) : sorry
-
-
-  }
+      ... = (∑ i in s, (f i)^p) ^ (1/p) * (∑ i in s, (g i)^q) ^ (1/q) : begin
+        have : 1 - 1/p = 1/q := sub_eq_of_eq_add' (eq.symm hpq.inv_add_inv_conj),
+        rw this,
+      end },
 end
