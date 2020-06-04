@@ -832,11 +832,10 @@ tendsto.comp (nnreal.continuous_at_rpow h) (tendsto.prod_mk_nhds hx hy)
 
 namespace ennreal
 
-lemma zou (x y : ennreal) : (x ⁻¹) ⁻¹ = x := by exact inv_inv
-
-/-- The nonnegative real power function `x^y`, defined for `x : nnreal` and `y : ℝ ` as the
-restriction of the real power function. For `x > 0`, it is equal to `exp (y log x)`. For `x = 0`,
-one sets `0 ^ 0 = 1` and `0 ^ y = 0` for `y ≠ 0`. -/
+/-- The real power function `x^y` on extended nonnegative reals, defined for `x : ennreal` and
+`y : ℝ ` as the restriction of the real power function if `0 < x < ⊤`, and with the natural values
+for `0` and `⊤` (i.e., `0 ^ x = 0` for `x > 0`, `1` for `x = 0` and `⊤` for `x < 0`, and
+`⊤ ^ x = 1 / 0 ^ x`). -/
 noncomputable def rpow : ennreal → ℝ → ennreal
 | (some x) y := if x = 0 ∧ y < 0 then ⊤ else (x ^ y : nnreal)
 | none     y := if 0 < y then ⊤ else if y = 0 then 1 else 0
@@ -1034,35 +1033,99 @@ begin
 end
 
 lemma one_le_rpow {x : ennreal} {z : ℝ} (h : 1 ≤ x) (h₁ : 0 ≤ z) : 1 ≤ x^z :=
-real.one_le_rpow h h₁
+begin
+  cases x,
+  { rcases le_iff_eq_or_lt.1 h₁ with H|H,
+    { simp [← H, le_refl] },
+    { simp [top_rpow_of_pos H] } },
+  { simp only [one_le_coe_iff, some_eq_coe] at h,
+    simp [coe_rpow_of_nonneg _ h₁, nnreal.one_le_rpow h h₁] }
+end
 
 lemma rpow_le_rpow {x y : ennreal} {z: ℝ} (h₁ : x ≤ y) (h₂ : 0 ≤ z) : x^z ≤ y^z :=
-real.rpow_le_rpow x.2 h₁ h₂
+begin
+  rcases le_iff_eq_or_lt.1 h₂ with H|H, { simp [← H, le_refl] },
+  cases y, { simp [top_rpow_of_pos H] },
+  cases x, { exact (not_top_le_coe h₁).elim },
+  simp at h₁,
+  simp [coe_rpow_of_nonneg _ h₂, nnreal.rpow_le_rpow h₁ h₂]
+end
 
 lemma rpow_lt_rpow {x y : ennreal} {z: ℝ} (h₁ : x < y) (h₂ : 0 < z) : x^z < y^z :=
-real.rpow_lt_rpow x.2 h₁ h₂
+begin
+  cases x, { exact (not_top_lt h₁).elim },
+  cases y, { simp [top_rpow_of_pos h₂, coe_rpow_of_nonneg _ (le_of_lt h₂)] },
+  simp at h₁,
+  simp [coe_rpow_of_nonneg _ (le_of_lt h₂), nnreal.rpow_lt_rpow h₁ h₂]
+end
 
-lemma rpow_lt_rpow_of_exponent_lt {x : ennreal} {y z : ℝ} (hx : 1 < x) (hyz : y < z) : x^y < x^z :=
-real.rpow_lt_rpow_of_exponent_lt hx hyz
+lemma rpow_lt_rpow_of_exponent_lt {x : ennreal} {y z : ℝ} (hx : 1 < x) (hx' : x ≠ ⊤) (hyz : y < z) :
+  x^y < x^z :=
+begin
+  lift x to nnreal using hx',
+  rw [one_lt_coe_iff] at hx,
+  simp [coe_rpow_of_ne_zero (ne_of_gt (lt_trans zero_lt_one hx)),
+        nnreal.rpow_lt_rpow_of_exponent_lt hx hyz]
+end
 
 lemma rpow_le_rpow_of_exponent_le {x : ennreal} {y z : ℝ} (hx : 1 ≤ x) (hyz : y ≤ z) : x^y ≤ x^z :=
-real.rpow_le_rpow_of_exponent_le hx hyz
+begin
+  cases x,
+  { rcases lt_trichotomy y 0 with Hy|Hy|Hy;
+    rcases lt_trichotomy z 0 with Hz|Hz|Hz;
+    simp [Hy, Hz, top_rpow_of_neg, top_rpow_of_pos, le_refl];
+    linarith },
+  { simp only [one_le_coe_iff, some_eq_coe] at hx,
+    simp [coe_rpow_of_ne_zero (ne_of_gt (lt_of_lt_of_le zero_lt_one hx)),
+          nnreal.rpow_le_rpow_of_exponent_le hx hyz] }
+end
 
 lemma rpow_lt_rpow_of_exponent_gt {x : ennreal} {y z : ℝ} (hx0 : 0 < x) (hx1 : x < 1) (hyz : z < y) :
   x^y < x^z :=
-real.rpow_lt_rpow_of_exponent_gt hx0 hx1 hyz
+begin
+  lift x to nnreal using ne_of_lt (lt_of_lt_of_le hx1 le_top),
+  simp at hx0 hx1,
+  simp [coe_rpow_of_ne_zero (ne_of_gt hx0), nnreal.rpow_lt_rpow_of_exponent_gt hx0 hx1 hyz]
+end
 
-lemma rpow_le_rpow_of_exponent_ge {x : ennreal} {y z : ℝ} (hx0 : 0 < x) (hx1 : x ≤ 1) (hyz : z ≤ y) :
+lemma rpow_le_rpow_of_exponent_ge {x : ennreal} {y z : ℝ} (hx1 : x ≤ 1) (hyz : z ≤ y) :
   x^y ≤ x^z :=
-real.rpow_le_rpow_of_exponent_ge hx0 hx1 hyz
+begin
+  lift x to nnreal using ne_of_lt (lt_of_le_of_lt hx1 coe_lt_top),
+  by_cases h : x = 0,
+  { rcases lt_trichotomy y 0 with Hy|Hy|Hy;
+    rcases lt_trichotomy z 0 with Hz|Hz|Hz;
+    simp [Hy, Hz, h, zero_rpow_of_neg, zero_rpow_of_pos, le_refl];
+    linarith },
+  { simp at hx1,
+    simp [coe_rpow_of_ne_zero h,
+          nnreal.rpow_le_rpow_of_exponent_ge (bot_lt_iff_ne_bot.mpr h) hx1 hyz] }
+end
 
 lemma rpow_le_one {x : ennreal} {e : ℝ} (he : 0 ≤ e) (hx2 : x ≤ 1) : x^e ≤ 1 :=
-real.rpow_le_one he x.2 hx2
+begin
+  lift x to nnreal using ne_of_lt (lt_of_le_of_lt hx2 coe_lt_top),
+  simp at hx2,
+  simp [coe_rpow_of_nonneg _ he, nnreal.rpow_le_one he hx2]
+end
 
 lemma one_lt_rpow {x : ennreal} {z : ℝ} (hx : 1 < x) (hz : 0 < z) : 1 < x^z :=
-real.one_lt_rpow hx hz
+begin
+  cases x,
+  { simp [top_rpow_of_pos hz],
+    exact coe_lt_top },
+  { simp at hx,
+    simp [coe_rpow_of_nonneg _ (le_of_lt hz), nnreal.one_lt_rpow hx hz] }
+end
 
-lemma rpow_lt_one {x : ennreal} {z : ℝ} (hx : 0 < x) (hx1 : x < 1) (hz : 0 < z) : x^z < 1 :=
-real.rpow_lt_one hx hx1 hz
+lemma rpow_lt_one {x : ennreal} {z : ℝ} (hx1 : x < 1) (hz : 0 < z) : x^z < 1 :=
+begin
+  by_cases h : x = 0,
+  { simp [h, zero_rpow_of_pos hz, ennreal.zero_lt_one] },
+  { lift x to nnreal using ne_of_lt (lt_of_lt_of_le hx1 le_top),
+    simp at h hx1,
+    have : 0 < x := bot_lt_iff_ne_bot.mpr h,
+    simp [coe_rpow_of_nonneg _ (le_of_lt hz), nnreal.rpow_lt_one this hx1 hz] }
+end
 
 end ennreal
