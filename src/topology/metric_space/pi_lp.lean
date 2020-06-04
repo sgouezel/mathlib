@@ -16,6 +16,8 @@ the product topology. We define them in this file.
 open real set
 open_locale big_operators
 
+variable {α : Type*}
+
 namespace real
 
 /-- Two real exponents `p, q` are conjugate if they are `> 1` and satisfy the equality
@@ -32,17 +34,25 @@ noncomputable def conjugate_exponent (p : ℝ) : ℝ := p/(p-1)
 `q`: many computations using these exponents require clearing out denominators, which can be done
 with `field_simp` given a proof that these denominators are non-zero, so we record the most usual
 ones. -/
+lemma is_conjugate_exponent.pos {p q : ℝ} (h : p.is_conjugate_exponent q) :
+  0 < p :=
+lt_trans zero_lt_one h.one_lt
+
 lemma is_conjugate_exponent.ne_zero {p q : ℝ} (h : p.is_conjugate_exponent q) :
   p ≠ 0 :=
-ne_of_gt (lt_trans zero_lt_one h.one_lt)
+ne_of_gt h.pos
 
 lemma is_conjugate_exponent.sub_one_ne_zero {p q : ℝ}
   (h : p.is_conjugate_exponent q) : p - 1 ≠ 0 :=
 sub_ne_zero_of_ne (ne_of_gt h.one_lt)
 
+lemma is_conjugate_exponent.one_div_pos {p q : ℝ} (h : p.is_conjugate_exponent q) :
+  0 < 1/p :=
+one_div_pos_of_pos h.pos
+
 lemma is_conjugate_exponent.one_div_ne_zero {p q : ℝ} (h : p.is_conjugate_exponent q) :
   1/p ≠ 0 :=
-λ H, by simpa [h.ne_zero] using H
+ne_of_gt (h.one_div_pos)
 
 lemma is_conjugate_exponent_iff {p q : ℝ} (h : 1 < p) :
   p.is_conjugate_exponent q ↔ q = p/(p-1) :=
@@ -85,8 +95,7 @@ namespace finset
 /-- Hölder inequality: the scalar product of two functions is bounded by the product of their
 `L^p` and `L^q` norms when `p` and `q` are conjugate exponents. Version for sums over finite sets,
 with nonnegative functions. -/
-theorem sum_rpow_holder_of_nonneg
-  {α : Type*} {s : finset α} {f g : α → ℝ} {p q : ℝ}
+theorem sum_rpow_holder_of_nonneg {s : finset α} {f g : α → ℝ} {p q : ℝ}
   (hpq : p.is_conjugate_exponent q) (hf : ∀ x ∈ s, 0 ≤ f x) (hg : ∀ x ∈ s, 0 ≤ g x) :
   (∑ i in s, f i * g i) ≤ (∑ i in s, (f i)^p) ^ (1/p) * (∑ i in s, (g i)^q) ^ (1/q) :=
 begin
@@ -189,8 +198,7 @@ end
 
 /-- Minkowski inequality: the `L^p` norm satisfies the triangular inequality, i.e.,
 `||f+g||_p ≤ ||f||_p + ||g||_p`. Version for sums over finite sets, with nonnegative functions. -/
-theorem sum_rpow_minkowski_of_nonneg
-  {α : Type*} {s : finset α} {f g : α → ℝ} {p : ℝ}
+theorem sum_rpow_minkowski_of_nonneg {s : finset α} {f g : α → ℝ} {p : ℝ}
   (hp : 1 ≤ p) (hf : ∀ x ∈ s, 0 ≤ f x) (hg : ∀ x ∈ s, 0 ≤ g x) :
   (∑ i in s, (f i + g i) ^ p)^(1/p) ≤ (∑ i in s, (f i)^p) ^ (1/p) + (∑ i in s, (g i)^p) ^ (1/p) :=
 begin
@@ -247,6 +255,84 @@ begin
       ... = ((∑ i in s, (f i)^p) ^ (1/p) + (∑ i in s, (g i)^p) ^ (1/p)) * S ^ (1/q) :
         by rw [S_eq, add_mul],
     exact (mul_le_mul_right (rpow_pos_of_pos S_pos _)).mp main },
+end
+
+/-- Hölder inequality: the scalar product of two functions is bounded by the product of their
+`L^p` and `L^q` norms when `p` and `q` are conjugate exponents. Version for sums over finite sets,
+with `nnreal`-valued functions. -/
+theorem sum_rpow_holder_nnreal {s : finset α} {f g : α → nnreal} {p q : ℝ}
+  (hpq : p.is_conjugate_exponent q) :
+  (∑ i in s, f i * g i) ≤ (∑ i in s, (f i)^p) ^ (1/p) * (∑ i in s, (g i)^q) ^ (1/q) :=
+begin
+  rw ← nnreal.coe_le_coe,
+  have hf : ∀ i ∈ s, 0 ≤ (f i : ℝ) := λ i hi, nnreal.coe_nonneg (f i),
+  have hg : ∀ i ∈ s, 0 ≤ (g i : ℝ) := λ i hi, nnreal.coe_nonneg (g i),
+  exact_mod_cast sum_rpow_holder_of_nonneg hpq hf hg
+end
+
+/-- Minkowski inequality: the `L^p` norm satisfies the triangular inequality, i.e.,
+`||f+g||_p ≤ ||f||_p + ||g||_p`. Version for sums over finite sets, with `nnreal`-valued
+functions. -/
+theorem sum_rpow_minkowski_nnreal {s : finset α} {f g : α → nnreal} {p : ℝ} (hp : 1 ≤ p) :
+  (∑ i in s, (f i + g i) ^ p)^(1/p) ≤ (∑ i in s, (f i)^p) ^ (1/p) + (∑ i in s, (g i)^p) ^ (1/p) :=
+begin
+  rw ← nnreal.coe_le_coe,
+  have hf : ∀ i ∈ s, 0 ≤ (f i : ℝ) := λ i hi, nnreal.coe_nonneg (f i),
+  have hg : ∀ i ∈ s, 0 ≤ (g i : ℝ) := λ i hi, nnreal.coe_nonneg (g i),
+  exact_mod_cast sum_rpow_minkowski_of_nonneg hp hf hg
+end
+
+/-- Hölder inequality: the scalar product of two functions is bounded by the product of their
+`L^p` and `L^q` norms when `p` and `q` are conjugate exponents. Version for sums over finite sets,
+with `ennreal`-valued functions. -/
+theorem sum_rpow_holder_ennreal {s : finset α} {f g : α → ennreal} {p q : ℝ}
+  (hpq : p.is_conjugate_exponent q) :
+  (∑ i in s, f i * g i) ≤ (∑ i in s, (f i)^p) ^ (1/p) * (∑ i in s, (g i)^q) ^ (1/q) :=
+begin
+  by_cases H : (∑ i in s, (f i)^p) ^ (1/p) = 0 ∨ (∑ i in s, (g i)^q) ^ (1/q) = 0,
+  { replace H : (∀ i ∈ s, f i = 0) ∨ (∀ i ∈ s, g i = 0),
+      by simpa [ennreal.rpow_eq_zero_iff, hpq.pos, hpq.symm.pos, asymm hpq.pos, asymm hpq.symm.pos,
+                sum_eq_zero_iff_of_nonneg] using H,
+    have : ∀ i ∈ s, f i * g i = 0 := λ i hi, by cases H; simp [H i hi],
+    have : (∑ i in s, f i * g i) = (∑ i in s, 0) := sum_congr rfl this,
+    simp [this] },
+  push_neg at H,
+  by_cases H' : (∑ i in s, (f i)^p) ^ (1/p) = ⊤ ∨ (∑ i in s, (g i)^q) ^ (1/q) = ⊤,
+  { cases H'; simp [H', -one_div_eq_inv, H] },
+  replace H' : (∀ i ∈ s, f i ≠ ⊤) ∧ (∀ i ∈ s, g i ≠ ⊤),
+    by simpa [ennreal.rpow_eq_top_iff, asymm hpq.pos, asymm hpq.symm.pos, hpq.pos, hpq.symm.pos,
+              ennreal.sum_eq_top_iff, not_or_distrib] using H',
+  have := ennreal.coe_le_coe.2 (@sum_rpow_holder_nnreal _ s (λ i, ennreal.to_nnreal (f i))
+              (λ i, ennreal.to_nnreal (g i)) _ _ hpq),
+  push_cast [← ennreal.coe_rpow_of_nonneg, le_of_lt (hpq.pos), le_of_lt (hpq.one_div_pos),
+             le_of_lt (hpq.symm.pos), le_of_lt (hpq.symm.one_div_pos)] at this,
+  convert this using 1,
+  { apply finset.sum_congr rfl (λ i hi, _), simp [H'.1 i hi, H'.2 i hi] },
+  { congr' 2;
+    apply finset.sum_congr rfl (λ i hi, _);
+    simp [H'.1 i hi, H'.2 i hi] }
+end
+
+/-- Minkowski inequality: the `L^p` norm satisfies the triangular inequality, i.e.,
+`||f+g||_p ≤ ||f||_p + ||g||_p`. Version for sums over finite sets, with `ennreal`-valued
+functions. -/
+theorem sum_rpow_minkowski_ennreal {s : finset α} {f g : α → ennreal} {p : ℝ} (hp : 1 ≤ p) :
+  (∑ i in s, (f i + g i) ^ p)^(1/p) ≤ (∑ i in s, (f i)^p) ^ (1/p) + (∑ i in s, (g i)^p) ^ (1/p) :=
+begin
+  by_cases H' : (∑ i in s, (f i)^p) ^ (1/p) = ⊤ ∨ (∑ i in s, (g i)^p) ^ (1/p) = ⊤,
+  { cases H'; simp [H', -one_div_eq_inv] },
+  have pos : 0 < p := lt_of_lt_of_le zero_lt_one hp,
+  replace H' : (∀ i ∈ s, f i ≠ ⊤) ∧ (∀ i ∈ s, g i ≠ ⊤),
+    by simpa [ennreal.rpow_eq_top_iff, asymm pos, pos, ennreal.sum_eq_top_iff,
+              not_or_distrib] using H',
+  have := ennreal.coe_le_coe.2 (@sum_rpow_minkowski_nnreal _ s (λ i, ennreal.to_nnreal (f i))
+              (λ i, ennreal.to_nnreal (g i)) _  hp),
+  push_cast [← ennreal.coe_rpow_of_nonneg, le_of_lt (pos), le_of_lt (one_div_pos_of_pos pos)] at this,
+  convert this using 2,
+  { apply finset.sum_congr rfl (λ i hi, _), simp [H'.1 i hi, H'.2 i hi] },
+  repeat { congr' 1;
+    apply finset.sum_congr rfl (λ i hi, _);
+    simp [H'.1 i hi, H'.2 i hi] }
 end
 
 end finset

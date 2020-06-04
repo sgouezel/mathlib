@@ -878,14 +878,16 @@ begin
   { simp [H, asymm H, ne_of_lt, zero_rpow_of_neg] }
 end
 
-lemma coe_rpow_of_ne_zero {x : nnreal} (h : x ≠ 0) (y : ℝ) : (x : ennreal) ^ y = (x ^ y : nnreal) :=
+@[norm_cast] lemma coe_rpow_of_ne_zero {x : nnreal} (h : x ≠ 0) (y : ℝ) :
+  (x : ennreal) ^ y = (x ^ y : nnreal) :=
 begin
   rw [← ennreal.some_eq_coe],
   dsimp only [(^), rpow],
   simp [h]
 end
 
-lemma coe_rpow_of_nonneg (x : nnreal) {y : ℝ} (h : 0 ≤ y) : (x : ennreal) ^ y = (x ^ y : nnreal) :=
+@[norm_cast] lemma coe_rpow_of_nonneg (x : nnreal) {y : ℝ} (h : 0 ≤ y) :
+  (x : ennreal) ^ y = (x ^ y : nnreal) :=
 begin
   by_cases hx : x = 0,
   { rcases le_iff_eq_or_lt.1 h with H|H,
@@ -960,7 +962,7 @@ begin
       simp [coe_rpow_of_ne_zero h, coe_rpow_of_ne_zero this, nnreal.rpow_mul] } }
 end
 
-@[simp] lemma rpow_nat_cast (x : ennreal) (n : ℕ) : x ^ (n : ℝ) = x ^ n :=
+@[simp, norm_cast] lemma rpow_nat_cast (x : ennreal) (n : ℕ) : x ^ (n : ℝ) = x ^ n :=
 begin
   cases x,
   { cases n;
@@ -968,7 +970,7 @@ begin
   { simp [coe_rpow_of_nonneg _ (nat.cast_nonneg n)] }
 end
 
-lemma coe_mul_rpow (x y : nnreal) (z : ℝ) :
+@[norm_cast] lemma coe_mul_rpow (x y : nnreal) (z : ℝ) :
   ((x : ennreal) * y) ^ z = x^z * y^z :=
 begin
   rcases lt_trichotomy z 0 with H|H|H,

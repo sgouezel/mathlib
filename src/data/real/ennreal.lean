@@ -10,7 +10,7 @@ import data.set.intervals
 noncomputable theory
 open classical set
 
-open_locale classical
+open_locale classical big_operators
 variables {α : Type*} {β : Type*}
 
 /-- The extended nonnegative real numbers. This is usually denoted [0, ∞],
@@ -600,15 +600,20 @@ section sum
 
 open finset
 
-/-- sum of finte numbers is still finite -/
+/-- A sum of finite numbers is still finite -/
 lemma sum_lt_top {s : finset α} {f : α → ennreal} :
   (∀a∈s, f a < ⊤) → s.sum f < ⊤ :=
 with_top.sum_lt_top
 
-/-- sum of finte numbers is still finite -/
+/-- A sum of finite numbers is still finite -/
 lemma sum_lt_top_iff {s : finset α} {f : α → ennreal} :
   s.sum f < ⊤ ↔ (∀a∈s, f a < ⊤) :=
 with_top.sum_lt_top_iff
+
+/-- A sum of numbers is infinite iff one of them is infinite -/
+lemma sum_eq_top_iff {s : finset α} {f : α → ennreal} :
+  (∑ x in s, f x) = ⊤ ↔ (∃a∈s, f a = ⊤) :=
+with_top.sum_eq_top_iff
 
 /-- seeing `ennreal` as `nnreal` does not change their sum, unless one of the `ennreal` is
 infinity -/
