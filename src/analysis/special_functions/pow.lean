@@ -359,8 +359,8 @@ begin
   rw exp_le_exp, exact mul_le_mul_of_nonpos_left hyz (log_nonpos (le_of_lt hx0) hx1),
 end
 
-lemma rpow_le_one {x e : ℝ} (he : 0 ≤ e) (hx : 0 ≤ x) (hx2 : x ≤ 1) : x^e ≤ 1 :=
-by rw ←one_rpow e; apply rpow_le_rpow; assumption
+lemma rpow_le_one {x z : ℝ} (hx : 0 ≤ x) (hx2 : x ≤ 1) (hz : 0 ≤ z) : x^z ≤ 1 :=
+by rw ←one_rpow z; apply rpow_le_rpow; assumption
 
 lemma one_lt_rpow (hx : 1 < x) (hz : 0 < z) : 1 < x^z :=
 by { rw ← one_rpow z, exact rpow_lt_rpow zero_le_one hx hz }
@@ -787,8 +787,8 @@ lemma rpow_le_rpow_of_exponent_ge {x : nnreal} {y z : ℝ} (hx0 : 0 < x) (hx1 : 
   x^y ≤ x^z :=
 real.rpow_le_rpow_of_exponent_ge hx0 hx1 hyz
 
-lemma rpow_le_one {x : nnreal} {e : ℝ} (he : 0 ≤ e) (hx2 : x ≤ 1) : x^e ≤ 1 :=
-real.rpow_le_one he x.2 hx2
+lemma rpow_le_one {x : nnreal} {z : ℝ} (hx2 : x ≤ 1) (hz : 0 ≤ z) : x^z ≤ 1 :=
+real.rpow_le_one x.2 hx2 hz
 
 lemma one_lt_rpow {x : nnreal} {z : ℝ} (hx : 1 < x) (hz : 0 < z) : 1 < x^z :=
 real.one_lt_rpow hx hz
@@ -829,11 +829,10 @@ lemma filter.tendsto.nnrpow {α : Type*} {f : filter α} {u : α → nnreal} {v 
   tendsto (λ a, (u a) ^ (v a)) f (𝓝 (x ^ y)) :=
 tendsto.comp (nnreal.continuous_at_rpow h) (tendsto.prod_mk_nhds hx hy)
 
-
 namespace ennreal
 
 /-- The real power function `x^y` on extended nonnegative reals, defined for `x : ennreal` and
-`y : ℝ ` as the restriction of the real power function if `0 < x < ⊤`, and with the natural values
+`y : ℝ` as the restriction of the real power function if `0 < x < ⊤`, and with the natural values
 for `0` and `⊤` (i.e., `0 ^ x = 0` for `x > 0`, `1` for `x = 0` and `⊤` for `x < 0`, and
 `⊤ ^ x = 1 / 0 ^ x`). -/
 noncomputable def rpow : ennreal → ℝ → ennreal
@@ -996,7 +995,7 @@ begin
 end
 
 lemma mul_rpow_of_ne_top {x y : ennreal} (hx : x ≠ ⊤) (hy : y ≠ ⊤) (z : ℝ) :
-  ((x : ennreal) * y) ^ z = x^z * y^z :=
+  (x * y) ^ z = x^z * y^z :=
 begin
   lift x to nnreal using hx,
   lift y to nnreal using hy,
@@ -1044,7 +1043,7 @@ begin
     simp [coe_rpow_of_nonneg _ h₁, nnreal.one_le_rpow h h₁] }
 end
 
-lemma rpow_le_rpow {x y : ennreal} {z: ℝ} (h₁ : x ≤ y) (h₂ : 0 ≤ z) : x^z ≤ y^z :=
+lemma rpow_le_rpow {x y : ennreal} {z : ℝ} (h₁ : x ≤ y) (h₂ : 0 ≤ z) : x^z ≤ y^z :=
 begin
   rcases le_iff_eq_or_lt.1 h₂ with H|H, { simp [← H, le_refl] },
   cases y, { simp [top_rpow_of_pos H] },
@@ -1053,7 +1052,7 @@ begin
   simp [coe_rpow_of_nonneg _ h₂, nnreal.rpow_le_rpow h₁ h₂]
 end
 
-lemma rpow_lt_rpow {x y : ennreal} {z: ℝ} (h₁ : x < y) (h₂ : 0 < z) : x^z < y^z :=
+lemma rpow_lt_rpow {x y : ennreal} {z : ℝ} (h₁ : x < y) (h₂ : 0 < z) : x^z < y^z :=
 begin
   cases x, { exact (not_top_lt h₁).elim },
   cases y, { simp [top_rpow_of_pos h₂, coe_rpow_of_nonneg _ (le_of_lt h₂)] },
@@ -1104,11 +1103,11 @@ begin
           nnreal.rpow_le_rpow_of_exponent_ge (bot_lt_iff_ne_bot.mpr h) hx1 hyz] }
 end
 
-lemma rpow_le_one {x : ennreal} {e : ℝ} (he : 0 ≤ e) (hx2 : x ≤ 1) : x^e ≤ 1 :=
+lemma rpow_le_one {x : ennreal} {z : ℝ} (hx2 : x ≤ 1) (hz : 0 ≤ z) : x^z ≤ 1 :=
 begin
   lift x to nnreal using ne_of_lt (lt_of_le_of_lt hx2 coe_lt_top),
   simp at hx2,
-  simp [coe_rpow_of_nonneg _ he, nnreal.rpow_le_one he hx2]
+  simp [coe_rpow_of_nonneg _ hz, nnreal.rpow_le_one hx2 hz]
 end
 
 lemma one_lt_rpow {x : ennreal} {z : ℝ} (hx : 1 < x) (hz : 0 < z) : 1 < x^z :=
