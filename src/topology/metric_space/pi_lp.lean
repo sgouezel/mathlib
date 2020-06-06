@@ -14,9 +14,9 @@ the product topology. We define them in this file.
 -/
 
 open real set
-open_locale big_operators
+open_locale big_operators uniformity topological_space
 
-variable {α : Type*}
+variable {ι : Type*}
 
 namespace real
 
@@ -95,11 +95,11 @@ namespace finset
 /-- Hölder inequality: the scalar product of two functions is bounded by the product of their
 `L^p` and `L^q` norms when `p` and `q` are conjugate exponents. Version for sums over finite sets,
 with nonnegative functions. -/
-theorem sum_rpow_holder_of_nonneg {s : finset α} {f g : α → ℝ} {p q : ℝ}
+theorem sum_rpow_holder_of_nonneg {s : finset ι} {f g : ι → ℝ} {p q : ℝ}
   (hpq : p.is_conjugate_exponent q) (hf : ∀ x ∈ s, 0 ≤ f x) (hg : ∀ x ∈ s, 0 ≤ g x) :
   (∑ i in s, f i * g i) ≤ (∑ i in s, (f i)^p) ^ (1/p) * (∑ i in s, (g i)^q) ^ (1/q) :=
 begin
-  by_cases H : ∀ (i : α), i ∈ s → g i = 0,
+  by_cases H : ∀ (i : ι), i ∈ s → g i = 0,
   { -- assume first that all `g i` vanish. Then the result is trivial.
     have A : (∑ i in s, f i * g i) = (∑ i in s, f i * 0),
     { apply finset.sum_congr rfl (λ x hx, _), simp [H x hx] },
@@ -116,7 +116,7 @@ begin
     set S := (∑ i in s, (g i)^q) with hS,
     have S_ne : S ≠ 0,
     { assume Z,
-      have : ∀ (i : α), i ∈ s → 0 ≤ (g i)^q,
+      have : ∀ (i : ι), i ∈ s → 0 ≤ (g i)^q,
         by { assume i hi, exact rpow_nonneg_of_nonneg (hg i hi) _ },
       rw finset.sum_eq_zero_iff_of_nonneg this at Z,
       apply H,
@@ -126,7 +126,7 @@ begin
     { have : 0 ≤ S := finset.sum_nonneg (λ i hi, rpow_nonneg_of_nonneg (hg i hi) _),
       exact lt_of_le_of_ne this (ne.symm S_ne) },
     set a := λ i, (g i)^q / S with ha,
-    have fgS_nonneg : 0 ≤ ∑ (x : α) in s, f x * g x / S :=
+    have fgS_nonneg : 0 ≤ ∑ (x : ι) in s, f x * g x / S :=
       finset.sum_nonneg (λ i hi, div_nonneg (mul_nonneg (hf i hi) (hg i hi)) S_pos),
     -- formulate the main convexity inequality, in a suitable form
     have main : (∑ i in s, f i * g i/S) ^ p ≤ (∑ i in s, (f i)^p) / S := calc
@@ -184,7 +184,7 @@ begin
       end
       ... = (∑ i in s, (f i)^p) ^ (1/p) * S ^ (1-1/p) :
       begin
-        have : 0 ≤ ∑ (i : α) in s, f i ^ p :=
+        have : 0 ≤ ∑ (i : ι) in s, f i ^ p :=
           finset.sum_nonneg (λ i hi, rpow_nonneg_of_nonneg (hf i hi) _),
         simp only [sub_eq_add_neg, rpow_add S_pos, div_eq_inv_mul, mul_one, rpow_one],
         rw [mul_rpow (inv_nonneg.2 (le_of_lt S_pos)) this, ← rpow_neg_one,
@@ -198,7 +198,7 @@ end
 
 /-- Minkowski inequality: the `L^p` norm satisfies the triangular inequality, i.e.,
 `||f+g||_p ≤ ||f||_p + ||g||_p`. Version for sums over finite sets, with nonnegative functions. -/
-theorem sum_rpow_minkowski_of_nonneg {s : finset α} {f g : α → ℝ} {p : ℝ}
+theorem sum_rpow_minkowski_of_nonneg {s : finset ι} {f g : ι → ℝ} {p : ℝ}
   (hp : 1 ≤ p) (hf : ∀ x ∈ s, 0 ≤ f x) (hg : ∀ x ∈ s, 0 ≤ g x) :
   (∑ i in s, (f i + g i) ^ p)^(1/p) ≤ (∑ i in s, (f i)^p) ^ (1/p) + (∑ i in s, (g i)^p) ^ (1/p) :=
 begin
@@ -260,7 +260,7 @@ end
 /-- Hölder inequality: the scalar product of two functions is bounded by the product of their
 `L^p` and `L^q` norms when `p` and `q` are conjugate exponents. Version for sums over finite sets,
 with `nnreal`-valued functions. -/
-theorem sum_rpow_holder_nnreal {s : finset α} {f g : α → nnreal} {p q : ℝ}
+theorem sum_rpow_holder_nnreal {s : finset ι} {f g : ι → nnreal} {p q : ℝ}
   (hpq : p.is_conjugate_exponent q) :
   (∑ i in s, f i * g i) ≤ (∑ i in s, (f i)^p) ^ (1/p) * (∑ i in s, (g i)^q) ^ (1/q) :=
 begin
@@ -273,7 +273,7 @@ end
 /-- Minkowski inequality: the `L^p` norm satisfies the triangular inequality, i.e.,
 `||f+g||_p ≤ ||f||_p + ||g||_p`. Version for sums over finite sets, with `nnreal`-valued
 functions. -/
-theorem sum_rpow_minkowski_nnreal {s : finset α} {f g : α → nnreal} {p : ℝ} (hp : 1 ≤ p) :
+theorem sum_rpow_minkowski_nnreal {s : finset ι} {f g : ι → nnreal} {p : ℝ} (hp : 1 ≤ p) :
   (∑ i in s, (f i + g i) ^ p)^(1/p) ≤ (∑ i in s, (f i)^p) ^ (1/p) + (∑ i in s, (g i)^p) ^ (1/p) :=
 begin
   rw ← nnreal.coe_le_coe,
@@ -285,7 +285,7 @@ end
 /-- Hölder inequality: the scalar product of two functions is bounded by the product of their
 `L^p` and `L^q` norms when `p` and `q` are conjugate exponents. Version for sums over finite sets,
 with `ennreal`-valued functions. -/
-theorem sum_rpow_holder_ennreal {s : finset α} {f g : α → ennreal} {p q : ℝ}
+theorem sum_rpow_holder_ennreal {s : finset ι} {f g : ι → ennreal} {p q : ℝ}
   (hpq : p.is_conjugate_exponent q) :
   (∑ i in s, f i * g i) ≤ (∑ i in s, (f i)^p) ^ (1/p) * (∑ i in s, (g i)^q) ^ (1/q) :=
 begin
@@ -316,7 +316,7 @@ end
 /-- Minkowski inequality: the `L^p` norm satisfies the triangular inequality, i.e.,
 `||f+g||_p ≤ ||f||_p + ||g||_p`. Version for sums over finite sets, with `ennreal`-valued
 functions. -/
-theorem sum_rpow_minkowski_ennreal {s : finset α} {f g : α → ennreal} {p : ℝ} (hp : 1 ≤ p) :
+theorem sum_rpow_minkowski_ennreal {s : finset ι} {f g : ι → ennreal} {p : ℝ} (hp : 1 ≤ p) :
   (∑ i in s, (f i + g i) ^ p)^(1/p) ≤ (∑ i in s, (f i)^p) ^ (1/p) + (∑ i in s, (g i)^p) ^ (1/p) :=
 begin
   by_cases H' : (∑ i in s, (f i)^p) ^ (1/p) = ⊤ ∨ (∑ i in s, (g i)^p) ^ (1/p) = ⊤,
@@ -336,3 +336,97 @@ begin
 end
 
 end finset
+
+@[nolint unused_arguments]
+def pi_lp {ι : Type*} (p : ℝ) (hp : 1 ≤ p) (α : ι → Type*) : Type* := Π (i : ι), α i
+
+section emetric_space_aux
+
+variables (p : ℝ) (hp : 1 ≤ p) (α : ι → Type*) [∀ i, emetric_space (α i)] [fintype ι]
+
+open filter
+
+noncomputable def emetric_space.pi_lp_aux : emetric_space (pi_lp p hp α) :=
+have pos : 0 < p := lt_of_lt_of_le zero_lt_one hp,
+{ edist := λ f g, (∑ (i : ι), (edist (f i) (g i)) ^ p) ^ (1/p),
+  edist_self := λ f, by simp [edist, ennreal.zero_rpow_of_pos pos,
+                     ennreal.zero_rpow_of_pos (inv_pos.2 pos)],
+  edist_comm := λ f g, by simp [edist, edist_comm],
+  edist_triangle := λ f g h, calc
+    (∑ (i : ι), edist (f i) (h i) ^ p) ^ (1 / p) ≤
+    (∑ (i : ι), (edist (f i) (g i) + edist (g i) (h i)) ^ p) ^ (1 / p) :
+    begin
+      apply ennreal.rpow_le_rpow _ (div_nonneg zero_le_one pos),
+      refine finset.sum_le_sum (λ i hi, _),
+      exact ennreal.rpow_le_rpow (edist_triangle _ _ _) (le_trans zero_le_one hp)
+    end
+    ... ≤
+    (∑ (i : ι), edist (f i) (g i) ^ p) ^ (1 / p) + (∑ (i : ι), edist (g i) (h i) ^ p) ^ (1 / p) :
+      finset.sum_rpow_minkowski_ennreal hp,
+  eq_of_edist_eq_zero := λ f g hfg, begin
+    simp [edist, ennreal.rpow_eq_zero_iff, pos, asymm pos, finset.sum_eq_zero_iff_of_nonneg] at hfg,
+    exact funext hfg
+  end }
+
+local attribute [instance] emetric_space.pi_lp_aux
+
+lemma emetric_space.pi_lp_aux_uniformity_eq :
+  𝓤 (pi_lp p hp α) = @uniformity _ (Pi.uniform_space _) :=
+begin
+  have pos : 0 < p := lt_of_lt_of_le zero_lt_one hp,
+  have cancel : p * (1/p) = 1 := mul_div_cancel' 1 (ne_of_gt pos),
+  let F : pi_lp p hp α → (Π (i : ι), α i) := id,
+  have L : lipschitz_with 1 F,
+  { assume x y,
+    simp only [edist, forall_prop_of_true, one_mul, finset.mem_univ,
+               finset.sup_le_iff, ennreal.coe_one, F, id],
+    assume i,
+    calc edist (x i) (y i)
+    = (edist (x i) (y i) ^ p) ^ (1/p) :
+      by simp [← ennreal.rpow_mul, cancel, -one_div_eq_inv]
+    ... ≤ (∑ (i : ι), edist (x i) (y i) ^ p) ^ (1 / p) :
+    begin
+      apply ennreal.rpow_le_rpow _ (div_nonneg zero_le_one pos),
+      apply finset.single_le_sum (λ i hi, _) (finset.mem_univ i),
+      exact bot_le
+    end },
+  have AL : antilipschitz_with ((fintype.card ι : nnreal) ^ (1/p)) F,
+  { assume x y,
+    simp [edist, -one_div_eq_inv],
+    calc (∑ (i : ι), edist (x i) (y i) ^ p) ^ (1 / p) ≤
+    (∑ (i : ι), edist (F x) (F y) ^ p) ^ (1 / p) :
+    begin
+      apply ennreal.rpow_le_rpow _ (div_nonneg zero_le_one pos),
+      apply finset.sum_le_sum (λ i hi, _),
+      apply ennreal.rpow_le_rpow _ (le_of_lt pos),
+      exact finset.le_sup (finset.mem_univ i)
+    end
+    ... = (((fintype.card ι : nnreal)) ^ (1/p) : nnreal) * edist (F x) (F y) :
+    begin
+      simp only [nsmul_eq_mul, finset.card_univ, ennreal.rpow_one, finset.sum_const,
+        ennreal.mul_rpow_of_nonneg _ _ (div_nonneg zero_le_one pos), ←ennreal.rpow_mul, cancel],
+      have : (fintype.card ι : ennreal) = (fintype.card ι : nnreal) :=
+        (ennreal.coe_nat (fintype.card ι)).symm,
+      rw [this, ennreal.coe_rpow_of_nonneg _ (div_nonneg zero_le_one pos)]
+    end },
+  have A : uniform_embedding F :=
+    AL.uniform_embedding L.uniform_continuous,
+  have : (λ (x : pi_lp p hp α × pi_lp p hp α), (F x.fst, F x.snd)) = id,
+    by ext i; refl,
+  rw [← A.comap_uniformity, this, comap_id],
+end
+
+end emetric_space_aux
+
+instance topological_space.pi_lp (p : ℝ) (hp : 1 ≤ p) (α : ι → Type*)
+  [∀ i, topological_space (α i)] : topological_space (pi_lp p hp α) :=
+Pi.topological_space
+
+instance uniform_space.pi_lp (p : ℝ) (hp : 1 ≤ p) (α : ι → Type*)
+  [∀ i, uniform_space (α i)] : uniform_space (pi_lp p hp α) :=
+Pi.uniform_space _
+
+noncomputable instance emetric_space.pi_lp [fintype ι] (p : ℝ) (hp : 1 ≤ p) (α : ι → Type*)
+  [∀ i, emetric_space (α i)] : emetric_space (pi_lp p hp α) :=
+(emetric_space.pi_lp_aux p hp α).replace_uniformity
+  (emetric_space.pi_lp_aux_uniformity_eq p hp α).symm

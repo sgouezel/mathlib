@@ -1033,6 +1033,16 @@ begin
       simp [hx', hy'] } }
 end
 
+lemma mul_rpow_of_nonneg (x y : ennreal) {z : ℝ} (hz : 0 ≤ z) :
+  (x * y) ^ z = x ^ z * y ^ z :=
+begin
+  rcases le_iff_eq_or_lt.1 hz with H|H, { simp [← H] },
+  by_cases h : x = 0 ∨ y = 0,
+  { cases h; simp [h, zero_rpow_of_pos H] },
+  push_neg at h,
+  exact mul_rpow_of_ne_zero h.1 h.2 z
+end
+
 lemma one_le_rpow {x : ennreal} {z : ℝ} (h : 1 ≤ x) (h₁ : 0 ≤ z) : 1 ≤ x^z :=
 begin
   cases x,
