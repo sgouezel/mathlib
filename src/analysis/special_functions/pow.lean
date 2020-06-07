@@ -849,20 +849,20 @@ by cases x; { dsimp only [(^), rpow], simp [lt_irrefl] }
 lemma top_rpow_def (y : ℝ) : (⊤ : ennreal) ^ y = if 0 < y then ⊤ else if y = 0 then 1 else 0 :=
 rfl
 
-lemma top_rpow_of_pos {y : ℝ} (h : 0 < y) : (⊤ : ennreal) ^ y = ⊤ :=
+@[simp] lemma top_rpow_of_pos {y : ℝ} (h : 0 < y) : (⊤ : ennreal) ^ y = ⊤ :=
 by simp [top_rpow_def, h]
 
-lemma top_rpow_of_neg {y : ℝ} (h : y < 0) : (⊤ : ennreal) ^ y = 0 :=
+@[simp] lemma top_rpow_of_neg {y : ℝ} (h : y < 0) : (⊤ : ennreal) ^ y = 0 :=
 by simp [top_rpow_def, asymm h, ne_of_lt h]
 
-lemma zero_rpow_of_pos {y : ℝ} (h : 0 < y) : (0 : ennreal) ^ y = 0 :=
+@[simp] lemma zero_rpow_of_pos {y : ℝ} (h : 0 < y) : (0 : ennreal) ^ y = 0 :=
 begin
   rw [← ennreal.coe_zero, ← ennreal.some_eq_coe],
   dsimp only [(^), rpow],
   simp [h, asymm h, ne_of_gt h],
 end
 
-lemma zero_rpow_of_neg {y : ℝ} (h : y < 0) : (0 : ennreal) ^ y = ⊤ :=
+@[simp] lemma zero_rpow_of_neg {y : ℝ} (h : y < 0) : (0 : ennreal) ^ y = ⊤ :=
 begin
   rw [← ennreal.coe_zero, ← ennreal.some_eq_coe],
   dsimp only [(^), rpow],
@@ -901,7 +901,7 @@ by cases x; dsimp only [(^), rpow]; simp [zero_lt_one, not_lt_of_le zero_le_one]
 @[simp] lemma one_rpow (x : ℝ) : (1 : ennreal) ^ x = 1 :=
 by { rw [← coe_one, coe_rpow_of_ne_zero one_ne_zero], simp }
 
-lemma rpow_eq_zero_iff {x : ennreal} {y : ℝ} : x ^ y = 0 ↔ (x = 0 ∧ 0 < y) ∨ (x = ⊤ ∧ y < 0) :=
+@[simp] lemma rpow_eq_zero_iff {x : ennreal} {y : ℝ} : x ^ y = 0 ↔ (x = 0 ∧ 0 < y) ∨ (x = ⊤ ∧ y < 0) :=
 begin
   cases x,
   { rcases lt_trichotomy y 0 with H|H|H;
@@ -912,7 +912,7 @@ begin
     { simp [coe_rpow_of_ne_zero h, h] } }
 end
 
-lemma rpow_eq_top_iff {x : ennreal} {y : ℝ} : x ^ y = ⊤ ↔ (x = 0 ∧ y < 0) ∨ (x = ⊤ ∧ 0 < y) :=
+@[simp] lemma rpow_eq_top_iff {x : ennreal} {y : ℝ} : x ^ y = ⊤ ↔ (x = 0 ∧ y < 0) ∨ (x = ⊤ ∧ 0 < y) :=
 begin
   cases x,
   { rcases lt_trichotomy y 0 with H|H|H;
@@ -1137,6 +1137,19 @@ begin
     simp at h hx1,
     have : 0 < x := bot_lt_iff_ne_bot.mpr h,
     simp [coe_rpow_of_nonneg _ (le_of_lt hz), nnreal.rpow_lt_one this hx1 hz] }
+end
+
+lemma to_real_rpow (x : ennreal) (z : ℝ) :
+  (x.to_real) ^ z = (x ^ z).to_real :=
+begin
+  rcases lt_trichotomy z 0 with H|H|H,
+  { cases x, { simp [H, ne_of_lt] },
+    by_cases hx : x = 0,
+    { simp [hx, H, ne_of_lt] },
+    { simp [coe_rpow_of_ne_zero hx] } },
+  { simp [H] },
+  { cases x, { simp [H, ne_of_gt] },
+    simp [coe_rpow_of_nonneg _ (le_of_lt H)] }
 end
 
 end ennreal

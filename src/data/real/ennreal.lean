@@ -76,6 +76,8 @@ by { rw [coe_nnreal_eq], refl }
 
 @[simp] lemma top_to_nnreal : ∞.to_nnreal = 0 := rfl
 @[simp] lemma top_to_real : ∞.to_real = 0 := rfl
+@[simp] lemma one_to_real : (1 : ennreal).to_real = 1 := rfl
+@[simp] lemma one_to_nnreal : (1 : ennreal).to_nnreal = 1 := rfl
 @[simp] lemma coe_to_real (r : nnreal) : (r : ennreal).to_real = r := rfl
 @[simp] lemma zero_to_nnreal : (0 : ennreal).to_nnreal = 0 := rfl
 @[simp] lemma zero_to_real : (0 : ennreal).to_real = 0 := rfl

@@ -16,6 +16,8 @@ the product topology. We define them in this file.
 open real set
 open_locale big_operators uniformity topological_space
 
+noncomputable theory
+
 variable {ι : Type*}
 
 namespace real
@@ -28,7 +30,7 @@ structure is_conjugate_exponent (p q : ℝ) : Prop :=
 (inv_add_inv_conj : 1/p + 1/q = 1)
 
 /-- The conjugate exponent of `p` is `q = p/(p-1)`, so that `1/p + 1/q = 1`. -/
-noncomputable def conjugate_exponent (p : ℝ) : ℝ := p/(p-1)
+def conjugate_exponent (p : ℝ) : ℝ := p/(p-1)
 
 /- Register several non-vanishing results following from the fact that `p` has a conjugate exponent
 `q`: many computations using these exponents require clearing out denominators, which can be done
@@ -337,16 +339,40 @@ end
 
 end finset
 
+/-- A copy of a Pi type, on which we will put the `L^p` distance. Since the Pi type itself is
+already endowed with the `L^∞` distance, we need the type synonym to avoid confusing typeclass
+resolution. Also, we let it depend on `p`, to get a whole family of type on which we can put
+different distances, and we provide the assumption `hp` in the definition, to make it available
+to typeclass resolution when it looks for a distance on `pi_lp p hp α`. -/
 @[nolint unused_arguments]
 def pi_lp {ι : Type*} (p : ℝ) (hp : 1 ≤ p) (α : ι → Type*) : Type* := Π (i : ι), α i
 
-section emetric_space_aux
+instance {ι : Type*} (p : ℝ) (hp : 1 ≤ p) (α : ι → Type*) [∀ i, inhabited (α i)] :
+  inhabited (pi_lp p hp α) :=
+⟨λ i, default (α i)⟩
+
+/-- Canonical bijection between `pi_lp_equiv` and the original Pi type. We introduce it to be able
+to compare the `L^p` and `L^∞` distances through it. -/
+def pi_lp_equiv {ι : Type*} (p : ℝ) (hp : 1 ≤ p) (α : ι → Type*) :
+  pi_lp p hp α ≃ Π (i : ι), α i :=
+{ to_fun := id,
+  inv_fun := id,
+  left_inv := λ x, rfl,
+  right_inv := λ x, rfl }
+
+namespace emetric_space
 
 variables (p : ℝ) (hp : 1 ≤ p) (α : ι → Type*) [∀ i, emetric_space (α i)] [fintype ι]
 
 open filter
 
-noncomputable def emetric_space.pi_lp_aux : emetric_space (pi_lp p hp α) :=
+/-- Endowing the space `pi_lp p hp α` with the `L^p` edistance. This definition is not satisfactory,
+as it does not register the fact that the topology and the uniform structure coincide with the
+product one. Therefore, we do not register it as an instance. Using this as a temporary emetric
+space instance, we will show that the uniform structure is equal (but not defeq) to the product one,
+and then register an instance in which we replace the uniform structure by the product one using
+this emetric space and `emetric_space.replace_uniformity`. -/
+def pi_lp_aux : emetric_space (pi_lp p hp α) :=
 have pos : 0 < p := lt_of_lt_of_le zero_lt_one hp,
 { edist := λ f g, (∑ (i : ι), (edist (f i) (g i)) ^ p) ^ (1/p),
   edist_self := λ f, by simp [edist, ennreal.zero_rpow_of_pos pos,
@@ -370,53 +396,64 @@ have pos : 0 < p := lt_of_lt_of_le zero_lt_one hp,
 
 local attribute [instance] emetric_space.pi_lp_aux
 
-lemma emetric_space.pi_lp_aux_uniformity_eq :
-  𝓤 (pi_lp p hp α) = @uniformity _ (Pi.uniform_space _) :=
+lemma lipschitz_with_pi_lp_equiv : lipschitz_with 1 (pi_lp_equiv p hp α) :=
 begin
   have pos : 0 < p := lt_of_lt_of_le zero_lt_one hp,
   have cancel : p * (1/p) = 1 := mul_div_cancel' 1 (ne_of_gt pos),
-  let F : pi_lp p hp α → (Π (i : ι), α i) := id,
-  have L : lipschitz_with 1 F,
-  { assume x y,
-    simp only [edist, forall_prop_of_true, one_mul, finset.mem_univ,
-               finset.sup_le_iff, ennreal.coe_one, F, id],
-    assume i,
-    calc edist (x i) (y i)
-    = (edist (x i) (y i) ^ p) ^ (1/p) :
-      by simp [← ennreal.rpow_mul, cancel, -one_div_eq_inv]
-    ... ≤ (∑ (i : ι), edist (x i) (y i) ^ p) ^ (1 / p) :
-    begin
-      apply ennreal.rpow_le_rpow _ (div_nonneg zero_le_one pos),
-      apply finset.single_le_sum (λ i hi, _) (finset.mem_univ i),
-      exact bot_le
-    end },
-  have AL : antilipschitz_with ((fintype.card ι : nnreal) ^ (1/p)) F,
-  { assume x y,
-    simp [edist, -one_div_eq_inv],
-    calc (∑ (i : ι), edist (x i) (y i) ^ p) ^ (1 / p) ≤
-    (∑ (i : ι), edist (F x) (F y) ^ p) ^ (1 / p) :
-    begin
-      apply ennreal.rpow_le_rpow _ (div_nonneg zero_le_one pos),
-      apply finset.sum_le_sum (λ i hi, _),
-      apply ennreal.rpow_le_rpow _ (le_of_lt pos),
-      exact finset.le_sup (finset.mem_univ i)
-    end
-    ... = (((fintype.card ι : nnreal)) ^ (1/p) : nnreal) * edist (F x) (F y) :
-    begin
-      simp only [nsmul_eq_mul, finset.card_univ, ennreal.rpow_one, finset.sum_const,
-        ennreal.mul_rpow_of_nonneg _ _ (div_nonneg zero_le_one pos), ←ennreal.rpow_mul, cancel],
-      have : (fintype.card ι : ennreal) = (fintype.card ι : nnreal) :=
-        (ennreal.coe_nat (fintype.card ι)).symm,
-      rw [this, ennreal.coe_rpow_of_nonneg _ (div_nonneg zero_le_one pos)]
-    end },
-  have A : uniform_embedding F :=
-    AL.uniform_embedding L.uniform_continuous,
-  have : (λ (x : pi_lp p hp α × pi_lp p hp α), (F x.fst, F x.snd)) = id,
+  assume x y,
+  simp only [edist, forall_prop_of_true, one_mul, finset.mem_univ, finset.sup_le_iff,
+             ennreal.coe_one],
+  assume i,
+  calc edist (x i) (y i)
+  = (edist (x i) (y i) ^ p) ^ (1/p) :
+    by simp [← ennreal.rpow_mul, cancel, -one_div_eq_inv]
+  ... ≤ (∑ (i : ι), edist (x i) (y i) ^ p) ^ (1 / p) :
+  begin
+    apply ennreal.rpow_le_rpow _ (div_nonneg zero_le_one pos),
+    apply finset.single_le_sum (λ i hi, _) (finset.mem_univ i),
+    exact bot_le
+  end
+end
+
+lemma antilipschitz_with_pi_lp_equiv :
+  antilipschitz_with ((fintype.card ι : nnreal) ^ (1/p)) (pi_lp_equiv p hp α) :=
+begin
+  have pos : 0 < p := lt_of_lt_of_le zero_lt_one hp,
+  have cancel : p * (1/p) = 1 := mul_div_cancel' 1 (ne_of_gt pos),
+  assume x y,
+  simp [edist, -one_div_eq_inv],
+  calc (∑ (i : ι), edist (x i) (y i) ^ p) ^ (1 / p) ≤
+  (∑ (i : ι), edist (pi_lp_equiv p hp α x) (pi_lp_equiv p hp α y) ^ p) ^ (1 / p) :
+  begin
+    apply ennreal.rpow_le_rpow _ (div_nonneg zero_le_one pos),
+    apply finset.sum_le_sum (λ i hi, _),
+    apply ennreal.rpow_le_rpow _ (le_of_lt pos),
+    exact finset.le_sup (finset.mem_univ i)
+  end
+  ... = (((fintype.card ι : nnreal)) ^ (1/p) : nnreal) *
+    edist (pi_lp_equiv p hp α x) (pi_lp_equiv p hp α y) :
+  begin
+    simp only [nsmul_eq_mul, finset.card_univ, ennreal.rpow_one, finset.sum_const,
+      ennreal.mul_rpow_of_nonneg _ _ (div_nonneg zero_le_one pos), ←ennreal.rpow_mul, cancel],
+    have : (fintype.card ι : ennreal) = (fintype.card ι : nnreal) :=
+      (ennreal.coe_nat (fintype.card ι)).symm,
+    rw [this, ennreal.coe_rpow_of_nonneg _ (div_nonneg zero_le_one pos)]
+  end
+end
+
+lemma pi_lp_aux_uniformity_eq :
+  𝓤 (pi_lp p hp α) = @uniformity _ (Pi.uniform_space _) :=
+begin
+  have A : uniform_embedding (pi_lp_equiv p hp α) :=
+    (antilipschitz_with_pi_lp_equiv p hp α).uniform_embedding
+      (lipschitz_with_pi_lp_equiv p hp α).uniform_continuous,
+  have : (λ (x : pi_lp p hp α × pi_lp p hp α),
+    ((pi_lp_equiv p hp α) x.fst, (pi_lp_equiv p hp α) x.snd)) = id,
     by ext i; refl,
   rw [← A.comap_uniformity, this, comap_id],
 end
 
-end emetric_space_aux
+end emetric_space
 
 instance topological_space.pi_lp (p : ℝ) (hp : 1 ≤ p) (α : ι → Type*)
   [∀ i, topological_space (α i)] : topological_space (pi_lp p hp α) :=
@@ -426,7 +463,34 @@ instance uniform_space.pi_lp (p : ℝ) (hp : 1 ≤ p) (α : ι → Type*)
   [∀ i, uniform_space (α i)] : uniform_space (pi_lp p hp α) :=
 Pi.uniform_space _
 
-noncomputable instance emetric_space.pi_lp [fintype ι] (p : ℝ) (hp : 1 ≤ p) (α : ι → Type*)
+instance emetric_space.pi_lp [fintype ι] (p : ℝ) (hp : 1 ≤ p) (α : ι → Type*)
   [∀ i, emetric_space (α i)] : emetric_space (pi_lp p hp α) :=
 (emetric_space.pi_lp_aux p hp α).replace_uniformity
   (emetric_space.pi_lp_aux_uniformity_eq p hp α).symm
+
+lemma emetric_space.pi_lp_edist [fintype ι] {p : ℝ} {hp : 1 ≤ p} {α : ι → Type*}
+  [∀ i, emetric_space (α i)] (x y : pi_lp p hp α) :
+  edist x y = (∑ (i : ι), (edist (x i) (y i)) ^ p) ^ (1/p) := rfl
+
+instance metric_space.pi_lp [fintype ι] (p : ℝ) (hp : 1 ≤ p) (α : ι → Type*)
+  [∀ i, metric_space (α i)] : metric_space (pi_lp p hp α) :=
+begin
+  /- we construct the instance from the emetric space instance to avoid checking again that the
+  uniformity is the same as the product uniformity, but we register nevertheless a nice formula
+  for the distance -/
+  have pos : 0 < p := lt_of_lt_of_le zero_lt_one hp,
+  refine emetric_space.to_metric_space_of_dist
+    (λf g, (∑ (i : ι), (dist (f i) (g i)) ^ p) ^ (1/p)) _ _,
+  { assume f g,
+    simp [emetric_space.pi_lp_edist, ennreal.rpow_eq_top_iff, asymm pos, pos,
+          ennreal.sum_eq_top_iff, edist_ne_top] },
+  { assume f g,
+    have A : ∀ (i : ι), i ∈ (finset.univ : finset ι) → edist (f i) (g i) ^ p < ⊤ :=
+      λ i hi, by simp [lt_top_iff_ne_top, edist_ne_top, le_of_lt pos],
+    simp [dist, -one_div_eq_inv, emetric_space.pi_lp_edist, ← ennreal.to_real_rpow,
+          ennreal.to_real_sum A, dist_edist] }
+end
+
+lemma metric_space.pi_lp_dist [fintype ι] {p : ℝ} {hp : 1 ≤ p} {α : ι → Type*}
+  [∀ i, metric_space (α i)] (x y : pi_lp p hp α) :
+  dist x y = (∑ (i : ι), (dist (x i) (y i)) ^ p) ^ (1/p) := rfl
