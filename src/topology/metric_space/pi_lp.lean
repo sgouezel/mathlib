@@ -455,10 +455,6 @@ end
 
 end emetric_space
 
-instance pi_lp.topological_space (p : ℝ) (hp : 1 ≤ p) (α : ι → Type*)
-  [∀ i, topological_space (α i)] : topological_space (pi_lp p hp α) :=
-Pi.topological_space
-
 instance pi_lp.uniform_space (p : ℝ) (hp : 1 ≤ p) (α : ι → Type*)
   [∀ i, uniform_space (α i)] : uniform_space (pi_lp p hp α) :=
 Pi.uniform_space _
@@ -468,7 +464,7 @@ instance pi_lp.emetric_space [fintype ι] (p : ℝ) (hp : 1 ≤ p) (α : ι → 
 (emetric_space.pi_lp_aux p hp α).replace_uniformity
   (emetric_space.pi_lp_aux_uniformity_eq p hp α).symm
 
-lemma emetric_space.pi_lp_edist [fintype ι] {p : ℝ} {hp : 1 ≤ p} {α : ι → Type*}
+lemma pi_lp_edist [fintype ι] {p : ℝ} {hp : 1 ≤ p} {α : ι → Type*}
   [∀ i, emetric_space (α i)] (x y : pi_lp p hp α) :
   edist x y = (∑ (i : ι), (edist (x i) (y i)) ^ p) ^ (1/p) := rfl
 
@@ -482,64 +478,42 @@ begin
   refine emetric_space.to_metric_space_of_dist
     (λf g, (∑ (i : ι), (dist (f i) (g i)) ^ p) ^ (1/p)) _ _,
   { assume f g,
-    simp [emetric_space.pi_lp_edist, ennreal.rpow_eq_top_iff, asymm pos, pos,
+    simp [pi_lp_edist, ennreal.rpow_eq_top_iff, asymm pos, pos,
           ennreal.sum_eq_top_iff, edist_ne_top] },
   { assume f g,
     have A : ∀ (i : ι), i ∈ (finset.univ : finset ι) → edist (f i) (g i) ^ p < ⊤ :=
       λ i hi, by simp [lt_top_iff_ne_top, edist_ne_top, le_of_lt pos],
-    simp [dist, -one_div_eq_inv, emetric_space.pi_lp_edist, ← ennreal.to_real_rpow,
+    simp [dist, -one_div_eq_inv, pi_lp_edist, ← ennreal.to_real_rpow,
           ennreal.to_real_sum A, dist_edist] }
 end
 
-lemma metric_space.pi_lp_dist [fintype ι] {p : ℝ} {hp : 1 ≤ p} {α : ι → Type*}
+lemma pi_lp_dist [fintype ι] {p : ℝ} {hp : 1 ≤ p} {α : ι → Type*}
   [∀ i, metric_space (α i)] (x y : pi_lp p hp α) :
   dist x y = (∑ (i : ι), (dist (x i) (y i)) ^ p) ^ (1/p) := rfl
-
-instance pi_lp.add_comm_monoid (p : ℝ) (hp : 1 ≤ p) (α : ι → Type*)
-  [∀ i, add_comm_monoid (α i)] : add_comm_monoid (pi_lp p hp α) :=
-pi.add_comm_monoid
-
-instance pi_lp.add_comm_group (p : ℝ) (hp : 1 ≤ p) (α : ι → Type*)
-  [∀ i, add_comm_group (α i)] : add_comm_group (pi_lp p hp α) :=
-pi.add_comm_group
 
 /-- normed group instance on the product of finitely many normed groups, using the `L^p` norm. -/
 instance pi_lp.normed_group [fintype ι] (p : ℝ) (hp : 1 ≤ p) (α : ι → Type*)
   [∀i, normed_group (α i)] : normed_group (pi_lp p hp α) :=
 { norm := λf, (∑ (i : ι), norm (f i) ^ p) ^ (1/p),
-  dist_eq := λ x y, by { simp [metric_space.pi_lp_dist, dist_eq_norm], refl } }
+  dist_eq := λ x y, by { simp [pi_lp_dist, dist_eq_norm], refl },
+  .. pi.add_comm_group }
 
 lemma pi_lp.norm_eq [fintype ι] {p : ℝ} {hp : 1 ≤ p} {α : ι → Type*}
   [∀i, normed_group (α i)] (f : pi_lp p hp α) :
-  ∥f∥ = (∑ (i : ι), norm (f i) ^ p) ^ (1/p) := rfl
+  ∥f∥ = (∑ (i : ι), ∥f i∥ ^ p) ^ (1/p) := rfl
 
-instance pi_lp.semimodule (R : Type*) [semiring R] (p : ℝ) (hp : 1 ≤ p) (α : ι → Type*)
-  [∀ i, add_comm_monoid (α i)]
-  [∀ i, semimodule R (α i)] : semimodule R (pi_lp p hp α) :=
-pi.semimodule _ _ _
-
-/-- The product of finitely many normed spaces is a normed space, with the sup norm. -/
-instance pi_lp.normed_space0 (𝕜 : Type*) [normed_field 𝕜]
-  [fintype ι] (p : ℝ) (hp : 1 ≤ p) (α : ι → Type*)
-  [∀i, normed_group (α i)] [∀i, normed_space 𝕜 (α i)] :
-  semimodule 𝕜 (pi_lp p hp α) := by apply_instance
-
+/-- The product of finitely many normed spaces is a normed space, with the `L^p` norm. -/
 instance pi_lp.normed_space (𝕜 : Type*) [normed_field 𝕜]
   [fintype ι] (p : ℝ) (hp : 1 ≤ p) (α : ι → Type*)
   [∀i, normed_group (α i)] [∀i, normed_space 𝕜 (α i)] :
   normed_space 𝕜 (pi_lp p hp α) :=
-{ norm_smul_le := begin
+{ norm_smul_le :=
+  begin
     assume c f,
-    simp [pi_lp.norm_eq, norm_smul, real.mul_rpow, norm_nonneg],
-    rw ← finset.mul_sum,
-
-end,
-
-}
-
-#exit
-
-{ norm_smul_le := λ a f, le_of_eq $
-    show (↑(finset.sup finset.univ (λ (b : ι), nnnorm (a • f b))) : ℝ) =
-      nnnorm a * ↑(finset.sup finset.univ (λ (b : ι), nnnorm (f b))),
-    by simp only [(nnreal.coe_mul _ _).symm, nnreal.mul_finset_sup, nnnorm_smul] }
+    have : p * (1 / p) = 1 := mul_div_cancel' 1 (ne_of_gt (lt_of_lt_of_le zero_lt_one hp)),
+    simp only [pi_lp.norm_eq, norm_smul, mul_rpow, norm_nonneg, ←finset.mul_sum, pi.smul_apply],
+    rw [mul_rpow (rpow_nonneg_of_nonneg (norm_nonneg _) _), ← rpow_mul (norm_nonneg _),
+        this, rpow_one],
+    exact finset.sum_nonneg (λ i hi, rpow_nonneg_of_nonneg (norm_nonneg _) _)
+  end,
+  .. pi.semimodule ι α 𝕜 }
