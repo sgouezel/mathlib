@@ -20,6 +20,8 @@ and extra recursors:
 
 universes u v
 
+attribute [protected] nat.pow_zero nat.pow_succ
+
 instance : canonically_ordered_comm_semiring ℕ :=
 { le_iff_exists_add := assume a b,
   ⟨assume h, let ⟨c, hc⟩ := nat.le.dest h in ⟨c, hc.symm⟩,
@@ -894,7 +896,7 @@ attribute [simp] nat.pow_zero nat.pow_one
 | (k+1) := show 1^k * 1 = 1, by rw [mul_one, one_pow]
 
 theorem pow_add (a m n : ℕ) : a^(m + n) = a^m * a^n :=
-by induction n; simp [*, pow_succ, mul_assoc]
+by induction n; simp [*, nat.pow_succ, mul_assoc]
 
 theorem pow_two (a : ℕ) : a ^ 2 = a * a := show (1 * a) * a = _, by rw one_mul
 
