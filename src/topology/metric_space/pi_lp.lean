@@ -517,3 +517,18 @@ instance pi_lp.normed_space (𝕜 : Type*) [normed_field 𝕜]
     exact finset.sum_nonneg (λ i hi, rpow_nonneg_of_nonneg (norm_nonneg _) _)
   end,
   .. pi.semimodule ι α 𝕜 }
+
+namespace pi_lp
+/- Register simplification lemmas for the applications of `pi_lp` elements, as the usual lemmas
+for Pi types will not trigger. -/
+variables {𝕜 : Type*} [normed_field 𝕜]
+  [fintype ι] {p : ℝ} {hp : 1 ≤ p} {α : ι → Type*}
+  [∀i, normed_group (α i)] [∀i, normed_space 𝕜 (α i)]
+  (c : 𝕜) (x y : pi_lp p hp α) (i : ι)
+
+@[simp] lemma add_apply : (x + y) i = x i + y i := rfl
+@[simp] lemma sub_apply : (x - y) i = x i - y i := rfl
+@[simp] lemma smul_apply : (c • x) i = c • x i := rfl
+@[simp] lemma neg_apply : (-x) i = - (x i) := rfl
+
+end pi_lp
