@@ -5,6 +5,7 @@ Authors: Sébastien Gouëzel
 -/
 import geometry.manifold.smooth_manifold_with_corners
 import linear_algebra.finite_dimensional
+import analysis.normed_space.real_inner_product
 
 /-!
 # Constructing examples of manifolds over ℝ
@@ -14,10 +15,9 @@ or with boundary or with corners. As a concrete example, we construct explicitly
 boundary structure on the real interval `[x, y]`.
 
 More specifically, we introduce
-* `euclidean_space2 n` for a model vector space of dimension `n`.
-* `model_with_corners ℝ (euclidean_space2 n) (euclidean_half_space n)` for the model space used
+* `model_with_corners ℝ (euclidean_space n) (euclidean_half_space n)` for the model space used
 to define `n`-dimensional real manifolds with boundary
-* `model_with_corners ℝ (euclidean_space2 n) (euclidean_quadrant n)` for the model space used
+* `model_with_corners ℝ (euclidean_space n) (euclidean_quadrant n)` for the model space used
 to define `n`-dimensional real manifolds with corners
 
 ## Implementation notes
@@ -30,43 +30,28 @@ noncomputable theory
 open set
 
 /--
-The space `ℝ^n`. Note that the name is slightly misleading, as we only need a normed space
-structure on `ℝ^n`, but the one we use here is the sup norm and not the euclidean one -- this is not
-a problem for the manifold applications, but should probably be refactored at some point.
--/
-def euclidean_space2 (n : ℕ) : Type := (fin n → ℝ)
-
-/--
 The half-space in `ℝ^n`, used to model manifolds with boundary. We only define it when
 `1 ≤ n`, as the definition only makes sense in this case.
 -/
 def euclidean_half_space (n : ℕ) [has_zero (fin n)] : Type :=
-{x : euclidean_space2 n // 0 ≤ x 0}
+{x : euclidean_space (fin n) // 0 ≤ x 0}
 
 /--
 The quadrant in `ℝ^n`, used to model manifolds with corners, made of all vectors with nonnegative
 coordinates.
 -/
-def euclidean_quadrant (n : ℕ) : Type := {x : euclidean_space2 n // ∀i:fin n, 0 ≤ x i}
+def euclidean_quadrant (n : ℕ) : Type := {x : euclidean_space (fin n) // ∀i:fin n, 0 ≤ x i}
 
 section
 /- Register class instances for euclidean space and half-space and quadrant -/
-local attribute [reducible] euclidean_space2 euclidean_half_space euclidean_quadrant
+local attribute [reducible] euclidean_half_space euclidean_quadrant
 variable {n : ℕ}
 
  -- short-circuit type class inference
-instance : vector_space ℝ (euclidean_space2 n) := by apply_instance
-instance : normed_group (euclidean_space2 n) := by apply_instance
-instance : normed_space ℝ (euclidean_space2 n) := by apply_instance
 instance [has_zero (fin n)] : topological_space (euclidean_half_space n) := by apply_instance
 instance : topological_space (euclidean_quadrant n) := by apply_instance
-instance : finite_dimensional ℝ (euclidean_space2 n) := by apply_instance
-instance : inhabited (euclidean_space2 n) := ⟨0⟩
-instance [has_zero (fin n)] : inhabited (euclidean_half_space n) := ⟨⟨0, by simp⟩⟩
-instance : inhabited (euclidean_quadrant n) := ⟨⟨0, λ i, by simp⟩⟩
-
-@[simp] lemma findim_euclidean_space : finite_dimensional.findim ℝ (euclidean_space2 n) = n :=
-by simp
+instance [has_zero (fin n)] : inhabited (euclidean_half_space n) := ⟨⟨0, le_refl _⟩⟩
+instance : inhabited (euclidean_quadrant n) := ⟨⟨0, λ i, le_refl _⟩⟩
 
 lemma range_half_space (n : ℕ) [has_zero (fin n)] :
   range (λx : euclidean_half_space n, x.val) = {y | 0 ≤ y 0 } :=
@@ -79,11 +64,11 @@ by simp
 end
 
 /--
-Definition of the model with corners `(euclidean_space2 n, euclidean_half_space n)`, used as a
+Definition of the model with corners `(euclidean_space (fin n), euclidean_half_space n)`, used as a
 model for manifolds with boundary.
 -/
 def model_with_corners_euclidean_half_space (n : ℕ) [has_zero (fin n)] :
-  model_with_corners ℝ (euclidean_space2 n) (euclidean_half_space n) :=
+  model_with_corners ℝ (euclidean_space (fin n)) (euclidean_half_space n) :=
 { to_fun      := λx, x.val,
   inv_fun     := λx, ⟨λi, if h : i = 0 then max (x i) 0 else x i, by simp [le_refl]⟩,
   source      := univ,
@@ -93,14 +78,16 @@ def model_with_corners_euclidean_half_space (n : ℕ) [has_zero (fin n)] :
   left_inv'   := λ⟨xval, xprop⟩ hx, begin
     rw subtype.mk_eq_mk,
     ext1 i,
-    by_cases hi : i = 0;
-    simp [hi, xprop]
+    by_cases hi : i = 0,
+    { rw hi, simp [hi, xprop] },
+    { simp [hi] }
   end,
   right_inv'  := λx hx, begin
     simp [range_half_space] at hx,
     ext1 i,
-    by_cases hi : i = 0;
-    simp [hi, hx]
+    by_cases hi : i = 0,
+    { rw hi, simp [hi, hx] },
+    { simp [hi] }
   end,
   source_eq    := rfl,
   unique_diff' := begin
@@ -108,10 +95,10 @@ def model_with_corners_euclidean_half_space (n : ℕ) [has_zero (fin n)] :
     `unique_diff_on_convex`: it suffices to check that it is convex and with nonempty interior. -/
     rw range_half_space,
     apply unique_diff_on_convex,
-    show convex {y : euclidean_space2 n | 0 ≤ y 0},
+    show convex {y : euclidean_space (fin n) | 0 ≤ y 0},
     { assume x y hx hy a b ha hb hab,
       simpa using add_le_add (mul_nonneg ha hx) (mul_nonneg hb hy) },
-    show (interior {y : euclidean_space2 n | 0 ≤ y 0}).nonempty,
+    show (interior {y : euclidean_space (fin n) | 0 ≤ y 0}).nonempty,
     { use (λi, 1),
       rw mem_interior,
       refine ⟨(pi (univ : set (fin n)) (λi, (Ioi 0 : set ℝ))), _,
@@ -129,7 +116,8 @@ def model_with_corners_euclidean_half_space (n : ℕ) [has_zero (fin n)] :
     apply continuous_pi,
     assume i,
     by_cases h : i = 0,
-    { simp only [h, dif_pos],
+    { rw h,
+      simp only [dif_pos],
       have : continuous (λx:ℝ, max x 0) := continuous_id.max continuous_const,
       exact this.comp (continuous_apply 0) },
     { simp [h],
@@ -137,10 +125,10 @@ def model_with_corners_euclidean_half_space (n : ℕ) [has_zero (fin n)] :
   end }
 
 /--
-Definition of the model with corners `(euclidean_space2 n, euclidean_quadrant n)`, used as a
+Definition of the model with corners `(euclidean_space (fin n), euclidean_quadrant n)`, used as a
 model for manifolds with corners -/
 def model_with_corners_euclidean_quadrant (n : ℕ) :
-  model_with_corners ℝ (euclidean_space2 n) (euclidean_quadrant n) :=
+  model_with_corners ℝ (euclidean_space (fin n)) (euclidean_quadrant n) :=
 { to_fun      := λx, x.val,
   inv_fun     := λx, ⟨λi, max (x i) 0, λi, by simp [le_refl]⟩,
   source      := univ,
@@ -163,10 +151,10 @@ def model_with_corners_euclidean_quadrant (n : ℕ) :
     `unique_diff_on_convex`: it suffices to check that it is convex and with nonempty interior. -/
     rw range_quadrant,
     apply unique_diff_on_convex,
-    show convex {y : euclidean_space2 n | ∀ (i : fin n), 0 ≤ y i},
+    show convex {y : euclidean_space (fin n) | ∀ (i : fin n), 0 ≤ y i},
     { assume x y hx hy a b ha hb hab i,
       simpa using add_le_add (mul_nonneg ha (hx i)) (mul_nonneg hb (hy i)) },
-    show (interior {y : euclidean_space2 n | ∀ (i : fin n), 0 ≤ y i}).nonempty,
+    show (interior {y : euclidean_space (fin n) | ∀ (i : fin n), 0 ≤ y i}).nonempty,
     { use (λi, 1),
       rw mem_interior,
       refine ⟨(pi (univ : set (fin n)) (λi, (Ioi 0 : set ℝ))), _,
@@ -198,13 +186,13 @@ def Icc_left_chart (x y : ℝ) [fact (x < y)] :
   to_fun      := λ(z : Icc x y), ⟨λi, z.val - x, sub_nonneg.mpr z.property.1⟩,
   inv_fun     := λz, ⟨min (z.val 0 + x) y, by simp [le_refl, z.property, le_of_lt ‹x < y›]⟩,
   map_source' := by simp,
-  map_target' := by { simp, assume z hz, left, linarith },
+  map_target' := by { simp, assume z hz, left, dsimp at hz, linarith },
   left_inv'   := by { rintros ⟨z, hz⟩ h'z, simp at hz h'z, simp [hz, h'z] },
   right_inv'  := begin
     rintros ⟨z, hz⟩ h'z,
     rw subtype.mk_eq_mk,
     funext,
-    simp at hz h'z,
+    dsimp at hz h'z,
     have A : x + z 0 ≤ y, by linarith,
     rw subsingleton.elim i 0,
     simp [A, add_comm],
@@ -247,13 +235,13 @@ def Icc_right_chart (x y : ℝ) [fact (x < y)] :
   inv_fun     := λz,
     ⟨max (y - z.val 0) x, by simp [le_refl, z.property, le_of_lt ‹x < y›, sub_eq_add_neg]⟩,
   map_source' := by simp,
-  map_target' := by { simp, assume z hz, left, linarith },
+  map_target' := by { simp, assume z hz, left, dsimp at hz, linarith },
   left_inv'   := by { rintros ⟨z, hz⟩ h'z, simp at hz h'z, simp [hz, h'z, sub_eq_add_neg] },
   right_inv'  := begin
     rintros ⟨z, hz⟩ h'z,
     rw subtype.mk_eq_mk,
     funext,
-    simp at hz h'z,
+    dsimp at hz h'z,
     have A : x ≤ y - z 0, by linarith,
     rw subsingleton.elim i 0,
     simp [A, sub_sub_cancel],

@@ -118,12 +118,12 @@ lemma two_pos : 0 < (2:α) := add_pos zero_lt_one zero_lt_one
 @[field_simps] lemma two_ne_zero : (2:α) ≠ 0 :=
 ne.symm (ne_of_lt two_pos)
 
-lemma two_gt_one : 1 < (2:α) :=
+lemma one_lt_two : 1 < (2:α) :=
 calc (2:α) = 1+1 : one_add_one_eq_two
      ...   > 1+0 : add_lt_add_left zero_lt_one _
      ...   = 1   : add_zero 1
 
-lemma two_ge_one : 1 ≤ (2:α) := le_of_lt two_gt_one
+lemma one_le_two : 1 ≤ (2:α) := le_of_lt one_lt_two
 
 lemma four_pos : 0 < (4:α) := add_pos two_pos two_pos
 
@@ -294,8 +294,6 @@ lt_add_of_le_of_pos (le_refl _) zero_lt_one
 
 lemma lt_one_add (a : α) : a < 1 + a :=
 by { rw [add_comm], apply lt_add_one }
-
-lemma one_lt_two : 1 < (2 : α) := lt_add_one _
 
 lemma one_lt_mul (ha : 1 ≤ a) (hb : 1 < b) : 1 < a * b :=
 (one_mul (1 : α)) ▸ mul_lt_mul' ha hb zero_le_one (lt_of_lt_of_le zero_lt_one ha)
