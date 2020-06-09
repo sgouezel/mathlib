@@ -49,6 +49,7 @@ universes u v w
 
 variables {α : Type u} {F : Type v} {G : Type w}
 
+/-- Syntactic typeclass for types endowed with an inner product -/
 class has_inner (α : Type*) := (inner : α → α → ℝ)
 
 export has_inner (inner)
@@ -89,31 +90,52 @@ possible to the construction of the norm and the proof of the triangular inequal
 
 /-- A structure requiring that a scalar product is positive definite and symmetric, from which one
 can construct an `inner_product_space` instance in `inner_product_space.of_core`. -/
+@[nolint has_inhabited_instance]
 structure inner_product_space.core
-  (F : Type*) [add_comm_group F] [semimodule ℝ F] [has_inner F] :=
-(comm      : ∀ (x : F) y, inner x y = inner y x)
-(nonneg    : ∀ (x : F), 0 ≤ inner x x)
-(definite  : ∀ (x : F), inner x x = 0 → x = 0)
-(add_left  : ∀ (x : F) y z, inner (x + y) z = inner x z + inner y z)
-(smul_left : ∀ (x : F) y r, inner (r • x) y = r * inner x y)
+  (F : Type*) [add_comm_group F] [semimodule ℝ F] :=
+(inner     : F → F → ℝ)
+(comm      : ∀ x y, inner x y = inner y x)
+(nonneg    : ∀ x, 0 ≤ inner x x)
+(definite  : ∀ x, inner x x = 0 → x = 0)
+(add_left  : ∀ x y z, inner (x + y) z = inner x z + inner y z)
+(smul_left : ∀ x y r, inner (r • x) y = r * inner x y)
 
-namespace inner_product_space.core
+/- We set `inner_product_space.core` to be a class as we will use it as such in the construction
+of the normed space structure that it produces. However, all the instances we will use will be
+local to this proof. -/
+attribute [class] inner_product_space.core
 
-/- For the construction of the norm starting from an `inner_product_space.core` and the proof of
-its nice properties, we temporarily set `inner_product_space.core` as a class. -/
+namespace inner_product_space.of_core
+
 local attribute [class] inner_product_space.core
 
-variables [add_comm_group F] [semimodule ℝ F] [has_inner F] [c : inner_product_space.core F]
+variables [add_comm_group F] [semimodule ℝ F] [c : inner_product_space.core F]
 include c
 
-lemma smul_right (x y : F) (r : ℝ) : inner x (r • y) = r * inner x y :=
-by { rw [c.comm, c.smul_left, c.comm] }
+/-- Inner product constructed from an `inner_product_space.core` structure -/
+@[nolint incorrect_type_class_argument]
+def to_has_inner : has_inner F :=
+{ inner := c.inner }
 
-lemma add_right (x y z : F) : inner x (y + z) = inner x y + inner x z :=
-by { rw [c.comm, c.add_left], simp [c.comm] }
+local attribute [instance] to_has_inner
 
-/-- Norm constructing from an `inner_product_space.core` structure, defined to be the square root
+lemma inner_comm (x y : F) : inner x y = inner y x := c.comm x y
+
+lemma inner_add_left (x y z : F) : inner (x + y) z = inner x z + inner y z :=
+c.add_left _ _ _
+
+lemma inner_add_right (x y z : F) : inner x (y + z) = inner x y + inner x z :=
+by { rw [inner_comm, inner_add_left], simp [inner_comm] }
+
+lemma inner_smul_left (x y : F) (r : ℝ) : inner (r • x) y = r * inner x y :=
+c.smul_left _ _ _
+
+lemma inner_smul_right (x y : F) (r : ℝ) : inner x (r • y) = r * inner x y :=
+by { rw [inner_comm, inner_smul_left, inner_comm] }
+
+/-- Norm constructed from an `inner_product_space.core` structure, defined to be the square root
 of the scalar product. -/
+@[nolint incorrect_type_class_argument]
 def to_has_norm : has_norm F :=
 { norm := λ x, sqrt (inner x x) }
 
@@ -125,8 +147,8 @@ lemma inner_self_eq_norm_square (x : F) : inner x x = ∥x∥ * ∥x∥ :=
 (mul_self_sqrt (c.nonneg _)).symm
 
 /-- Expand `inner (x + y) (x + y)` -/
-lemma add_add_self (x y : F) : inner (x + y) (x + y) = inner x x + 2 * inner x y + inner y y :=
-by simpa [c.add_left, add_right, two_mul, add_assoc] using c.comm _ _
+lemma inner_add_add_self (x y : F) : inner (x + y) (x + y) = inner x x + 2 * inner x y + inner y y :=
+by simpa [inner_add_left, inner_add_right, two_mul, add_assoc] using inner_comm _ _
 
 /-- Cauchy–Schwarz inequality -/
 lemma inner_mul_inner_self_le (x y : F) : inner x y * inner x y ≤ inner x x * inner y y :=
@@ -135,7 +157,7 @@ begin
     assume t, calc
       0 ≤ inner (x+t•y) (x+t•y) : c.nonneg _
       ... = inner y y * t * t + 2 * inner x y * t + inner x x :
-        by { simp only [add_add_self, smul_right, c.smul_left], ring },
+        by { simp only [inner_add_add_self, inner_smul_right, inner_smul_left], ring },
   have := discriminant_le_zero this, rw discrim at this,
   have h : (2 * inner x y)^2 - 4 * inner y y * inner x x =
                       4 * (inner x y * inner x y - inner x x * inner y y) := by ring,
@@ -161,24 +183,25 @@ normed_group.of_core F
     begin
       split,
       { assume h,
-        simp [norm, sqrt_eq_zero (c.nonneg x)] at h,
-        exact c.definite x h },
+        rw [norm_eq_sqrt_inner,  sqrt_eq_zero] at h,
+        { exact c.definite x h },
+        { exact c.nonneg x } },
       { rintros rfl,
-        have : inner ((0 : ℝ) • (0 : F)) 0 = 0 * inner (0 : F) 0 := c.smul_left _ _ _,
+        have : inner ((0 : ℝ) • (0 : F)) 0 = 0 * inner (0 : F) 0 := inner_smul_left _ _ _,
         simp at this,
         simp [norm, this] }
     end,
   norm_neg := assume x,
     begin
       have A : (- (1 : ℝ)) • x = -x, by simp,
-      rw [norm_eq_sqrt_inner, norm_eq_sqrt_inner, ← A, c.smul_left, smul_right],
+      rw [norm_eq_sqrt_inner, norm_eq_sqrt_inner, ← A, inner_smul_left, inner_smul_right],
       simp,
     end,
   triangle := assume x y,
   begin
     have := calc
       ∥x + y∥ * ∥x + y∥ = inner (x + y) (x + y) : by rw inner_self_eq_norm_square
-      ... = inner x x + 2 * inner x y + inner y y : add_add_self _ _
+      ... = inner x x + 2 * inner x y + inner y y : inner_add_add_self _ _
       ... ≤ inner x x + 2 * (∥x∥ * ∥y∥) + inner y y :
         by linarith [abs_inner_le_norm x y, le_abs_self (inner x y)]
       ... = (∥x∥ + ∥y∥) * (∥x∥ + ∥y∥) : by { simp only [inner_self_eq_norm_square], ring },
@@ -192,22 +215,23 @@ def to_normed_space : normed_space ℝ F :=
 { norm_smul_le := assume r x, le_of_eq $
   begin
     have A : 0 ≤ ∥r∥ * ∥x∥ := mul_nonneg (abs_nonneg _) (sqrt_nonneg _),
-    rw [norm_eq_sqrt_inner, sqrt_eq_iff_mul_self_eq (c.nonneg _) A,
-        c.smul_left, smul_right, inner_self_eq_norm_square],
-    calc
-      abs(r) * ∥x∥ * (abs(r) * ∥x∥) = (abs(r) * abs(r)) * (∥x∥ * ∥x∥) : by ring
-      ... = r * (r * (∥x∥ * ∥x∥)) : by { rw abs_mul_abs_self, ring }
+    rw [norm_eq_sqrt_inner, sqrt_eq_iff_mul_self_eq _ A,
+        inner_smul_left, inner_smul_right, inner_self_eq_norm_square],
+    { calc
+        abs(r) * ∥x∥ * (abs(r) * ∥x∥) = (abs(r) * abs(r)) * (∥x∥ * ∥x∥) : by ring
+        ... = r * (r * (∥x∥ * ∥x∥)) : by { rw abs_mul_abs_self, ring } },
+    { exact c.nonneg _ }
   end }
 
-end inner_product_space.core
+end inner_product_space.of_core
 
-/-- Given an `inner_product_space.core` structure on a space, one can construct a normed space
-structure turning the space into an inner product space. -/
-def inner_product_space.of_core [add_comm_group F] [semimodule ℝ F] [has_inner F]
+/-- Given an `inner_product_space.core` structure on a space, one can use it to turn the space into
+an inner product space, constructing the norm out of the inner product. -/
+def inner_product_space.of_core [add_comm_group F] [semimodule ℝ F]
   (c : inner_product_space.core F) : inner_product_space F :=
 begin
-  letI : normed_group F := @inner_product_space.core.to_normed_group F _ _ _ c,
-  letI : normed_space ℝ F := @inner_product_space.core.to_normed_space F _ _ _ c,
+  letI : normed_group F := @inner_product_space.of_core.to_normed_group F _ _ c,
+  letI : normed_space ℝ F := @inner_product_space.of_core.to_normed_space F _ _ c,
   exact { norm_eq_sqrt_inner := λ x, rfl, .. c }
 end
 
@@ -652,3 +676,5 @@ begin
 end
 
 end orthogonal
+
+#lint
