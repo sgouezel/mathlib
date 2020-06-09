@@ -82,9 +82,9 @@ properties. However, sometimes, one would like to define the norm starting only 
 scalar product. This is what we implement in this paragraph, starting from a structure
 `inner_product_space.core` stating that we have a nice scalar product.
 
-Our goal here is not to develop a nice theory will all the supporting API, as this will be done
-below for `inner_product_space`. Instead, we go as directly as possible to the construction of the
-norm and the proof of the triangular inequality.
+Our goal here is not to develop a whole theory with all the supporting API, as this will be done
+below for `inner_product_space`. Instead, we implement the bare minimum to go as directly as
+possible to the construction of the norm and the proof of the triangular inequality.
 -/
 
 /-- A structure requiring that a scalar product is positive definite and symmetric, from which one
