@@ -355,10 +355,7 @@ instance {ι : Type*} (p : ℝ) (hp : 1 ≤ p) (α : ι → Type*) [∀ i, inhab
 to compare the `L^p` and `L^∞` distances through it. -/
 def pi_lp_equiv {ι : Type*} (p : ℝ) (hp : 1 ≤ p) (α : ι → Type*) :
   pi_lp p hp α ≃ Π (i : ι), α i :=
-{ to_fun := id,
-  inv_fun := id,
-  left_inv := λ x, rfl,
-  right_inv := λ x, rfl }
+equiv.refl _
 
 namespace emetric_space
 

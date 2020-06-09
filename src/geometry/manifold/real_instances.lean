@@ -20,6 +20,16 @@ to define `n`-dimensional real manifolds with boundary
 * `model_with_corners ℝ (euclidean_space n) (euclidean_quadrant n)` for the model space used
 to define `n`-dimensional real manifolds with corners
 
+## Notations
+
+In the locale `manifold`, we introduce the notations `𝓡 n` for the identity model with corners on
+`euclidean_space (fin n)`, and `𝓡∂ n` for
+`model_with_corners ℝ (euclidean_space n) (euclidean_half_space n)`. In this way, if a manifold
+`M` is boundaryless, smooth and modelled on `euclidean_space (fin m)`, and `N` is smooth with
+boundary modelled on `euclidean_half_space n`, and `f : M → N` is a smooth map, then the derivative
+of `f` can be written as `mfderiv (𝓡 m) (𝓡∂ n) f` (as to why the model with corners can not be
+implicit, see the discussion in `smooth_manifold_with_corners.lean`).
+
 ## Implementation notes
 
 The manifold structure on the interval `[x, y] = Icc x y` requires the assumption `x < y` as a
@@ -54,18 +64,18 @@ instance [has_zero (fin n)] : inhabited (euclidean_half_space n) := ⟨⟨0, le_
 instance : inhabited (euclidean_quadrant n) := ⟨⟨0, λ i, le_refl _⟩⟩
 
 lemma range_half_space (n : ℕ) [has_zero (fin n)] :
-  range (λx : euclidean_half_space n, x.val) = {y | 0 ≤ y 0 } :=
+  range (λx : euclidean_half_space n, x.val) = {y | 0 ≤ y 0} :=
 by simp
 
 lemma range_quadrant (n : ℕ) :
-  range (λx : euclidean_quadrant n, x.val) = {y | ∀i:fin n, 0 ≤ y i } :=
+  range (λx : euclidean_quadrant n, x.val) = {y | ∀i:fin n, 0 ≤ y i} :=
 by simp
 
 end
 
 /--
 Definition of the model with corners `(euclidean_space (fin n), euclidean_half_space n)`, used as a
-model for manifolds with boundary.
+model for manifolds with boundary. In the locale `manifold`, use the shortcut `𝓡∂ n`.
 -/
 def model_with_corners_euclidean_half_space (n : ℕ) [has_zero (fin n)] :
   model_with_corners ℝ (euclidean_space (fin n)) (euclidean_half_space n) :=
@@ -177,7 +187,6 @@ def model_with_corners_euclidean_quadrant (n : ℕ) :
 
 localized "notation `𝓡 `n := model_with_corners_self ℝ (euclidean_space (fin n))" in manifold
 localized "notation `𝓡∂ `n := model_with_corners_euclidean_half_space n" in manifold
-
 
 /--
 The left chart for the topological space `[x, y]`, defined on `[x,y)` and sending `x` to `0` in
@@ -301,8 +310,7 @@ begin
   have M : times_cont_diff_on ℝ ⊤ (λz : euclidean_space (fin 1), - z + (λi, y - x)) univ,
   { rw times_cont_diff_on_univ,
     exact times_cont_diff_id.neg.add times_cont_diff_const  },
-  haveI : has_groupoid (Icc x y)
-          (times_cont_diff_groupoid ⊤ (model_with_corners_euclidean_half_space 1)) :=
+  haveI : has_groupoid (Icc x y) (times_cont_diff_groupoid ⊤ (𝓡∂ 1)) :=
   begin
     apply has_groupoid_of_pregroupoid,
     assume e e' he he',

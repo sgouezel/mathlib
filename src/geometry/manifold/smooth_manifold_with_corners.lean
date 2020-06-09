@@ -50,13 +50,14 @@ to define `n`-dimensional real manifolds with corners
 With these definitions at hand, to invoke an `n`-dimensional real manifold without boundary,
 one could use
 
-  `variables {n : ℕ} {M : Type*} [topological_space M] [manifold (euclidean_space n)]
-   [smooth_manifold_with_corners (model_with_corners_self ℝ (euclidean_space n)) M]`.
+  `variables {n : ℕ} {M : Type*} [topological_space M] [manifold (euclidean_space (fin n))]
+   [smooth_manifold_with_corners (model_with_corners_self ℝ (euclidean_space (fin n))) M]`.
 
 However, this is not the recommended way: a theorem proved using this assumption would not apply
 for instance to the tangent space of such a manifold, which is modelled on
-`(euclidean_space n) × (euclidean_space n)` and not on `euclidean_space (2 * n)`! In the same way,
-it would not apply to product manifolds, modelled on `(euclidean_space n) × (euclidean_space m)`.
+`(euclidean_space (fin n)) × (euclidean_space (fin n))` and not on
+`euclidean_space (fin (2 * n))`! In the same way, it would not apply to product manifolds, modelled
+on `(euclidean_space (fin n)) × (euclidean_space (fin m))`.
 The right invocation does not focus on one specific construction, but on all constructions sharing
 the right properties, like
 
@@ -65,7 +66,7 @@ the right properties, like
   {M : Type*} [topological_space M] [manifold E M] [smooth_manifold_with_corners I M]`
 
 Here, `I.boundaryless` is a typeclass property ensuring that there is no boundary (this is for
-instance the case for model_with_corners_self, or products of these). Note that one could consider
+instance the case for `model_with_corners_self`, or products of these). Note that one could consider
 as a natural assumption to only use the trivial model with corners `model_with_corners_self ℝ E`,
 but again in product manifolds the natural model with corners will not be this one but the product
 one (and they are not defeq as `(λp : E × F, (p.1, p.2))` is not defeq to the identity). So, it is
@@ -82,7 +83,7 @@ example) is not directly a subtype of itself: the inclusion of `univ : set E` in
 show up in the definition, instead of `id`.
 
 A good abstraction covering both cases it to have a vector
-space `E` (with basic example the Euclidean space), a model space H``  (with basic example the upper
+space `E` (with basic example the Euclidean space), a model space `H`  (with basic example the upper
 half space), and an embedding of `H` into `E` (which can be the identity for `H = E`, or
 `subtype.val` for manifolds with corners). We say that the pair `(E, H)` with their embedding is a
 model with corners, and we encompass all the relevant properties (in particular the fact that the
