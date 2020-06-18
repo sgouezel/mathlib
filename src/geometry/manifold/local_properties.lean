@@ -15,14 +15,14 @@ variables {H : Type u} {M : Type*} [topological_space H] [topological_space M] [
 
 namespace structure_groupoid
 
-variables (G : structure_groupoid H)
+variables (G : structure_groupoid H) (G' : structure_groupoid H')
 
-structure invariant_prop_set_pt (G : structure_groupoid H) (P : set H → H → Prop) : Prop :=
+structure invariant_prop_set_pt (P : set H → H → Prop) : Prop :=
 (is_local   : ∀ {s x u}, is_open u → x ∈ u → (P s x ↔ P (s ∩ u) x))
 (invariance : ∀ s x (e : local_homeomorph H H), e ∈ G → P s x →
                 P (e.target ∩ e.symm ⁻¹' s) (e x))
 
-structure invariant_prop_set (G : structure_groupoid H) (P : set H → Prop) : Prop :=
+structure invariant_prop_set (P : set H → Prop) : Prop :=
 (is_local   : ∀ s, (∀ x ∈ s, ∃ u, is_open u ∧ x ∈ u ∧ P (s ∩ u)) → P s)
 (mono       : ∀ s u, P s → is_open u → P (s ∩ u))
 (invariance : ∀ s (e : local_homeomorph H H), e ∈ G → P s →
@@ -45,13 +45,12 @@ begin
     rwa [hy, e.right_inv hx.1] at this }
 end
 
-structure invariant_prop_fun_set_pt (G : structure_groupoid H) (G' : structure_groupoid H')
-  (P : (H → H') → (set H) → H → Prop) : Prop :=
+structure invariant_prop_fun_set_pt (P : (H → H') → (set H) → H → Prop) : Prop :=
 (is_local : ∀ {s x u} {f : H → H'}, is_open u → x ∈ u → (P f s x ↔ P f (s ∩ u) x))
-(right_invariance : ∀ s x f (e : local_homeomorph H H), e ∈ G → P f s x →
+(right_invariance : ∀ {s x f} {e : local_homeomorph H H}, e ∈ G → P f s x →
                       P (f ∘ e.symm) (e.target ∩ e.symm ⁻¹' s) (e x))
-(congr : ∀ s x (f g : H → H'), (∀ y ∈ s, f y = g y) → P f s x → P g s x)
-(left_invariance : ∀ s x f (e' : local_homeomorph H' H'), e' ∈ G' → s ⊆ f ⁻¹' (e'.source) →
+(congr : ∀ {s x} {f g : H → H'}, (∀ y ∈ s, f y = g y) → P f s x → P g s x)
+(left_invariance : ∀ {s x f} {e' : local_homeomorph H' H'}, e' ∈ G' → s ⊆ f ⁻¹' (e'.source) →
                      P f s x → P (e' ∘ f) s x)
 
 end structure_groupoid
@@ -153,13 +152,56 @@ begin
   have A : P (f ∘ g ∘ e.symm)
              (e.target ∩ e.symm ⁻¹' (s ∩ g⁻¹' f.source) ∩ (e.target ∩ e.symm ⁻¹' o)) (e x),
   { apply (hG.is_local _ _).1 h,
-    { library_search
-
-    },
-
-    { simp [xe, xo] },
-
-  }
+    { exact e.continuous_on_symm.preimage_open_of_open e.open_target o_open },
+    { simp [xe, xo] } },
+  have B : P ((f.symm ≫ₕ f') ∘ (f ∘ g ∘ e.symm))
+             (e.target ∩ e.symm ⁻¹' (s ∩ g⁻¹' f.source) ∩ (e.target ∩ e.symm ⁻¹' o)) (e x),
+  { apply hG.left_invariance (compatible_of_mem_maximal_atlas hf hf') _ A,
+    assume y hy,
+    simp at hy,
+    have : e.symm y ∈ o ∩ s, by simp [hy],
+    simpa [hy] using of' this },
+  have C : P (f' ∘ g ∘ e.symm)
+             (e.target ∩ e.symm ⁻¹' (s ∩ g⁻¹' f.source) ∩ (e.target ∩ e.symm ⁻¹' o)) (e x),
+  { apply hG.congr _ B,
+    assume y hy,
+    simp only [local_homeomorph.coe_trans, function.comp_app],
+    rw f.left_inv,
+    apply of,
+    simp at hy,
+    simp [hy] },
+  let w := e.symm ≫ₕ e',
+  let ow := w.target ∩ w.symm ⁻¹'
+    (e.target ∩ e.symm ⁻¹' (s ∩ g⁻¹' f.source) ∩ (e.target ∩ e.symm ⁻¹' o)),
+  have wG : w ∈ G := compatible_of_mem_maximal_atlas he he',
+  have D : P ((f' ∘ g ∘ e.symm) ∘ w.symm) ow (w (e x)) := hG.right_invariance wG C,
+  have E : P (f' ∘ g ∘ e'.symm) ow (w (e x)),
+  { apply hG.congr _ D,
+    assume y hy,
+    simp only [local_homeomorph.coe_trans_symm, function.comp_app, local_homeomorph.symm_symm],
+    rw e.left_inv,
+    simp at hy,
+    simp [hy] },
+  have : w (e x) = e' x, by simp [w, xe],
+  rw this at E,
+  have : ow = (e'.target ∩ e'.symm ⁻¹' (s ∩ g⁻¹' f'.source))
+               ∩ (w.target ∩ (e'.target ∩ e'.symm ⁻¹' o)),
+  { ext y,
+    split,
+    { assume hy,
+      have : e.symm (e ((e'.symm) y)) = e'.symm y, by { simp at hy, simp [hy] },
+      simp [this] at hy,
+      have : g (e'.symm y) ∈ f'.source, by { apply of', simp [hy] },
+      simp [hy, this] },
+    { assume hy,
+      simp at hy,
+      have : g (e'.symm y) ∈ f.source, by { apply of, simp [hy] },
+      simp [this, hy] } },
+  rw this at E,
+  apply (hG.is_local _ _).2 E,
+  { exact is_open_inter w.open_target
+      (e'.continuous_on_symm.preimage_open_of_open e'.open_target o_open) },
+  { simp [xe', xe, xo] }
 end
 
 
