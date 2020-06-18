@@ -36,6 +36,12 @@ instance lattice_set : complete_lattice (set α) :=
 instance : distrib_lattice (set α) :=
 { le_sup_inf := λ s t u x, or_and_distrib_left.2, ..set.lattice_set }
 
+@[simp] lemma bot_eq_empty : (⊥ : set α) = ∅ := rfl
+@[simp] lemma sup_eq_union (s t : set α) : s ⊔ t = s ∪ t := rfl
+@[simp] lemma inf_eq_inter (s t : set α) : s ⊓ t = s ∩ t := rfl
+@[simp] lemma le_eq_subset (s t : set α) : s ≤ t = (s ⊆ t) := rfl
+@[simp] lemma lt_eq_ssubset (s t : set α) : s < t = (s ⊂ t) := rfl
+
 /-- Image is monotone. See `set.image_image` for the statement in terms of `⊆`. -/
 lemma monotone_image {f : α → β} : monotone (image f) :=
 assume s t, assume h : s ⊆ t, image_subset _ h
@@ -261,6 +267,21 @@ bUnion_subset (λ x xs, subset.trans (h x xs) (subset_bUnion_of_mem xs))
 theorem bInter_subset_bInter_right {s : set α} {t1 t2 : α → set β}
   (h : ∀ x ∈ s, t1 x ⊆ t2 x) : (⋂ x ∈ s, t1 x) ⊆ (⋂ x ∈ s, t2 x) :=
 subset_bInter (λ x xs, subset.trans (bInter_subset_of_mem xs) (h x xs))
+
+theorem bUnion_subset_bUnion {γ : Type*} {s : set α} {t : α → set β} {s' : set γ} {t' : γ → set β}
+  (h : ∀ x ∈ s, ∃ y ∈ s', t x ⊆ t' y) :
+  (⋃ x ∈ s, t x) ⊆ (⋃ y ∈ s', t' y) :=
+begin
+  intros x,
+  simp only [mem_Union],
+  rintros ⟨a, a_in, ha⟩,
+  rcases h a a_in with ⟨c, c_in, hc⟩,
+  exact ⟨c, c_in, hc ha⟩
+end
+
+theorem bUnion_mono {s : set α} {t t' : α → set β} (h : ∀ x ∈ s, t x ⊆ t' x) :
+  (⋃ x ∈ s, t x) ⊆ (⋃ x ∈ s, t' x) :=
+bUnion_subset_bUnion (λ x x_in, ⟨x, x_in, h x x_in⟩)
 
 theorem bUnion_eq_Union (s : set α) (t : α → set β) : (⋃ x ∈ s, t x) = (⋃ x : s, t x.1) :=
 set.ext $ by simp
