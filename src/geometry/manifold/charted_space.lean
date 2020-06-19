@@ -16,8 +16,8 @@ maps.
 
 In this file, we introduce a general framework describing these notions, where the model space is an
 arbitrary topological space. We avoid the word *manifold*, which should be reserved for the
-situation where there are also notions of smoothness and dimension, and use the terminology
-"charted space" instead.
+situation where the model space is a (subset of a) vector space, and use the terminology
+*charted space* instead.
 
 If the changes of charts satisfy some additional property (for instance if they are smooth), then
 `M` inherits additional structure (it makes sense to talk about smooth manifolds). There are
@@ -569,9 +569,8 @@ iff.rfl
 
 /-- Changing coordinates between two elements of the maximal atlas gives rise to an element
 of the structure groupoid. -/
-lemma compatible_of_mem_maximal_atlas {e e' : local_homeomorph M H}
-  (he : e ∈ G.maximal_atlas M) (he' : e' ∈ G.maximal_atlas M) :
-  e.symm ≫ₕ e' ∈ G :=
+lemma structure_groupoid.compatible_of_mem_maximal_atlas {e e' : local_homeomorph M H}
+  (he : e ∈ G.maximal_atlas M) (he' : e' ∈ G.maximal_atlas M) : e.symm ≫ₕ e' ∈ G :=
 begin
   apply G.locality (λ x hx, _),
   set f := chart_at H (e.symm x) with hf,
