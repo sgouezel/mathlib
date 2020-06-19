@@ -75,17 +75,18 @@ P ((chart_at H' (f x)) ∘ f ∘ (chart_at H x).symm)
   ((chart_at H x).target ∩ (chart_at H x).symm ⁻¹' (s ∩ f ⁻¹' (chart_at H' (f x)).source))
   (chart_at H x x)
 
-section invariant_properties
+namespace structure_groupoid
 
-variables {G : structure_groupoid H} [has_groupoid M G]
-{G' : structure_groupoid H'} [has_groupoid M' G']
+variables {G : structure_groupoid H} {G' : structure_groupoid H'}
+{e e' : local_homeomorph M H} {f f' : local_homeomorph M' H'}
 
-/- If a property of a pointed set is invariant under the structure groupoid, then expressing it in
-the charted space does not depend on the element of the atlas one uses provided it contains the
-point in its source. -/
-lemma structure_groupoid.invariant_prop_set_pt.indep_chart
-  {P : set H → H → Prop} (hG : G.invariant_prop_set_pt P) {e e' : local_homeomorph M H} (x : M)
-  (he : e ∈ G.maximal_atlas M) (xe : x ∈ e.source) (he' : e' ∈ G.maximal_atlas M) (xe' : x ∈ e'.source)
+/-- If a property of a pointed set is invariant under the structure groupoid, then expressing it in
+the charted space does not depend on the element of the maximal atlas one uses provided it
+contains the point in its source. -/
+lemma invariant_prop_set_pt.indep_chart {P : set H → H → Prop}
+  (hG : G.invariant_prop_set_pt P) (x : M)
+  (he : e ∈ G.maximal_atlas M) (xe : x ∈ e.source)
+  (he' : e' ∈ G.maximal_atlas M) (xe' : x ∈ e'.source)
   {s : set M} (h : P (e.target ∩ e.symm ⁻¹' s) (e x)) :
   P (e'.target ∩ e'.symm ⁻¹' s) (e' x) :=
 begin
@@ -112,10 +113,10 @@ begin
   { simp [c, xe, xe'] }
 end
 
-/- If a property of a pointed set is invariant under the structure groupoid, then it is equivalent
+/-- If a property of a pointed set is invariant under the structure groupoid, then it is equivalent
 to express it in the charted space using the preferred chart at the point, or any maximal atlas
 member containing the point in its source. -/
-lemma structure_groupoid.invariant_prop_set_pt.lift_prop_set_pt_iff
+lemma invariant_prop_set_pt.lift_prop_set_pt_iff [has_groupoid M G]
   {P : set H → H → Prop} (hG : G.invariant_prop_set_pt P) {e : local_homeomorph M H} (x : M)
   (he : e ∈ G.maximal_atlas M) (xe : x ∈ e.source) (s : set M) :
   charted_space.lift_prop_set_pt P s x ↔ P (e.target ∩ e.symm ⁻¹' s) (e x) :=
@@ -123,12 +124,14 @@ lemma structure_groupoid.invariant_prop_set_pt.lift_prop_set_pt_iff
 hG.indep_chart x he xe (G.chart_mem_maximal_atlas x) (mem_chart_source H x)⟩
 
 
-/- If a property of a pointed set is invariant under the structure groupoid, then expressing it in
-the charted space does not depend on the element of the atlas one uses provided it contains the
-point in its source. -/
-lemma structure_groupoid.invariant_prop_fun_set_pt.indep_chart
-  {P : (H → H') → set H → H → Prop} (hG : G.invariant_prop_fun_set_pt G' P)
-  {e e' : local_homeomorph M H} {f f' : local_homeomorph M' H'} (g : M → M') (x : M)
+/-- If a property of a germ of function `g` on a pointed set `(s, x)` is invariant under the
+structure groupoid (in the source space and in the target space), then expressing it in charted
+spaces does not depend on the element of the maximal atlas one uses both in the source
+and in the target manifolds, provided they are defined around `x` and `g x` respectively, and
+provided `g` is continuous within `s` at `x` (otherwise, the local behavior of `g` at `x` can not
+be captured with a chart in the target). -/
+lemma invariant_prop_fun_set_pt.indep_chart {P : (H → H') → set H → H → Prop}
+  (hG : G.invariant_prop_fun_set_pt G' P) (g : M → M') (x : M)
   (he : e ∈ G.maximal_atlas M) (xe : x ∈ e.source)
   (he' : e' ∈ G.maximal_atlas M) (xe' : x ∈ e'.source)
   (hf : f ∈ G'.maximal_atlas M') (xf : g x ∈ f.source)
@@ -204,5 +207,4 @@ begin
   { simp [xe', xe, xo] }
 end
 
-
-end invariant_properties
+end structure_groupoid
