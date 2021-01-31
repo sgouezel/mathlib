@@ -405,7 +405,7 @@ end
 
 /-- Second technical lemma to control the growth of coefficients of the inverse. Bound the explicit
 expression for `∑_{k<n+1} aᵏ Qₖ` in terms of a sum of powers of the same sum one step before,
-in the specific setup we are interesting in, by reducing to the general bound in
+in the specific setup we are interested in, by reducing to the general bound in
 `radius_right_inv_pos_of_radius_pos_aux1`. -/
 lemma radius_right_inv_pos_of_radius_pos_aux2
   {n : ℕ} (hn : 2 ≤ n + 1) (p : formal_multilinear_series 𝕜 E F) (i : E ≃L[𝕜] F)
