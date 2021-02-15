@@ -473,6 +473,21 @@ le_antisymm
     generate_measurable.basic _ $ mem_image_of_mem _ $ hts)
   (generate_from_le $ assume t ⟨u, hu, eq⟩, eq ▸ ⟨u, generate_measurable.basic _ hu, rfl⟩)
 
+lemma generate_from_set_of_finite
+  (S : set (set α)) (hcompl : ∀ s ∈ S, sᶜ ∈ S) (hempty : ∅ ∈ S) (hfin : finite S)
+  (hun : ∀ s t ∈ S, s ∪ t ∈ S) :
+  generate_measurable S = S :=
+let m : measurable_space α :=
+{ measurable_set' := S,
+  measurable_set_empty := hempty,
+  measurable_set_compl := hcompl,
+  measurable_set_Union := sorry
+} in
+le_antisymm (generate_from_le (λ t ht, ht) : generate_from S ≤ m)
+  (λ t ht, measurable_set_generate_from ht)
+
+#exit
+
 lemma generate_from_set {α} (s : set α) :
   (generate_from ({∅, set.univ, s, sᶜ} : set (set α))).measurable_set'
     = ({∅, set.univ, s, sᶜ} : set (set α)) :=
